@@ -30,6 +30,7 @@ services:
     volumes:
       - ./services/ticket-service:/app
       - ./shared:/shared
+      - C:/Users/ebravo/Desktop/archivos:/app/uploads
 
   message-service:
     build: ./services/message-service
@@ -40,18 +41,16 @@ services:
     volumes:
       - ./services/message-service:/app
       - ./shared:/shared
+      - C:/Users/ebravo/Desktop/archivos:/app/uploads
 
   frontend:
     build: ./frontend
     container_name: mda-frontend
-
     ports:
       - "5173:5173"
-
     volumes:
       - ./frontend:/app
       - /app/node_modules
-
     environment:
       - CHOKIDAR_USEPOLLING=true
 

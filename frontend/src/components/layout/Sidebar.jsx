@@ -1,8 +1,15 @@
 import { useState } from "react"
 
 import {
-  useNavigate
-} from "react-router-dom"
+  Menu,
+  TicketPlus,
+  ClipboardList,
+  Users,
+  BarChart3,
+  Settings
+} from "lucide-react"
+
+import {useNavigate} from "react-router-dom"
 
 import useAuth from "../../hooks/useAuth"
 
@@ -25,76 +32,39 @@ export default function Sidebar() {
   const menu = [
 
     {
-      permission:
-        "VER_MENU_NUEVO_TICKET",
-
-      label:
-        "Nuevo Ticket",
-
-      icon:
-        "🎫",
-
-      route:
-        "/tickets",
-
-      primary:
-        true
+      permission:"VER_MENU_NUEVO_TICKET",
+      label:"Nuevo Ticket",
+      icon: TicketPlus,
+      route:"/crear-ticket",
+      primary:true
     },
 
     {
-      permission:
-        "VER_MENU_TICKETS",
-
-      label:
-        "Tickets",
-
-      icon:
-        "📋",
-
-      route:
-        "/tickets"
+      permission:"VER_MENU_TICKETS",
+      label:"Tickets",
+      icon: ClipboardList,
+      route:"/tickets"
     },
 
     {
-      permission:
-        "VER_MENU_USUARIOS",
-
-      label:
-        "Usuarios",
-
-      icon:
-        "👤",
-
-      route:
-        "/usuarios"
+      permission:"VER_MENU_USUARIOS",
+      label:"Usuarios",
+      icon: Users,
+      route:"/usuarios"
     },
 
     {
-      permission:
-        "VER_MENU_DASHBOARDS",
-
-      label:
-        "Dashboard",
-
-      icon:
-        "📊",
-
-      route:
-        "/dashboard"
+      permission:"VER_MENU_DASHBOARDS",
+      label:"Dashboard",
+      icon: BarChart3,
+      route:"/dashboard"
     },
 
     {
-      permission:
-        "VER_MENU_CONFIGURACION",
-
-      label:
-        "Configuración",
-
-      icon:
-        "⚙️",
-
-      route:
-        "/configuracion"
+      permission:"VER_MENU_CONFIGURACION",
+      label:"Configuración",
+      icon: Settings,
+      route:"/configuracion"
     }
   ]
 
@@ -121,60 +91,42 @@ export default function Sidebar() {
           )
         }
       >
-
         ☰
-
       </button>
 
-
       <nav>
-
         {
-          menu.map(item => (
+          menu.map(item => {
 
-            hasPermission(
-              item.permission
-            ) && (
+            const Icon = item.icon
 
-              <button
+            return (
 
-                key={
-                  item.permission
-                }
+              hasPermission(item.permission) && (
 
-                onClick={() =>
-                  navigate(
-                    item.route
-                  )
-                }
+                <button
+                  key={item.permission}
+                  onClick={() => navigate(item.route)}
+                  className={
+                    item.primary
+                      ? "menu-btn primary"
+                      : "menu-btn"
+                  }
+                >
 
-                className={
-                  item.primary
-                    ? "menu-btn primary"
-                    : "menu-btn"
-                }
-              >
-
-                <span className="icon">
-
-                  {item.icon}
-
-                </span>
-
-
-                {!collapsed && (
-
-                  <span>
-
-                    {item.label}
-
+                  <span className="icon">
+                    <Icon size={20}/>
                   </span>
 
-                )}
+                  {!collapsed && (
+                    <span>{item.label}</span>
+                  )}
 
-              </button>
+                </button>
+
+              )
             )
-          ))
+          })
         }
 
       </nav>

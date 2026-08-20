@@ -4,9 +4,7 @@ from app.services.proxy_service import proxy_request
 
 auth_bp = Blueprint("auth", __name__)
 
-
 AUTH_SERVICE = os.getenv("AUTH_SERVICE")
-
 
 @auth_bp.route("/login", methods=["POST"])
 def login():

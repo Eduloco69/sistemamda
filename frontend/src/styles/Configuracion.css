@@ -1,0 +1,138 @@
+.configuracion-page{
+  width:100%;
+  min-height:100%;
+  padding:30px;
+  background:#f3f6fb;
+  overflow-y:auto;
+
+}
+
+
+.configuracion-header{
+  margin-bottom:28px;
+}
+
+
+.configuracion-header h1{
+  margin:0;
+  color:#1f2937;
+  font-size:2rem;
+}
+
+
+.configuracion-header p{
+  margin-top:8px;
+  color:#6b7280;
+  font-size:.95rem;
+}
+
+
+.configuracion-list{
+  width:100%;
+  max-width:900px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+
+.configuracion-option{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding:20px 22px;
+  border:1px solid #e5e7eb;
+  border-radius:16px;
+  background:white;
+  text-align:left;
+  cursor:pointer;
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease,
+    border-color .2s ease;
+
+}
+
+.configuracion-option:hover{
+  transform:translateX(4px);
+  border-color:#c7d2fe;
+  box-shadow:
+    0 8px 24px rgba(0,0,0,.08);
+}
+
+.configuracion-option-icon{
+  width:52px;
+  height:52px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:14px;
+  background:#eef2ff;
+  color:#2563eb;
+}
+
+.configuracion-option-icon svg{
+  width:26px;
+  height:26px;
+}
+
+
+.configuracion-option-content{
+  flex:1;
+}
+
+
+.configuracion-option-content h2{
+  margin:0 0 5px;
+  color:#1f2937;
+  font-size:1.05rem;
+  font-weight:600;
+}
+
+
+.configuracion-option-content p{
+  margin:0;
+  color:#6b7280;
+  font-size:.9rem;
+}
+
+
+.configuracion-option-arrow{
+  width:30px;
+  height:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#9ca3af;
+  transition:
+    transform .2s ease,
+    color .2s ease;
+}
+
+.configuracion-option-arrow svg{
+  width:20px;
+  height:20px;
+}
+.configuracion-option:hover
+.configuracion-option-arrow{
+  color:#6366f1;
+  transform:translateX(4px);
+}
+
+@media(max-width:700px){
+
+  .configuracion-page{
+    padding:20px;
+  }
+
+  .configuracion-option{
+    padding:16px;
+  }
+
+  .configuracion-option-content p{
+    display:none;
+  }
+
+}

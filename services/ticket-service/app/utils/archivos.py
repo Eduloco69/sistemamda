@@ -1,7 +1,7 @@
 import os
 from uuid import uuid4
 
-UPLOAD_FOLDER = "/tmp/uploads"
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
 
 def save_uploaded_file(file):
 
@@ -19,3 +19,4 @@ def save_uploaded_file(file):
     file.save(full_path)
 
     return filename, extension
+

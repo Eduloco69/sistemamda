@@ -48,37 +48,26 @@ def obtener_mensajes_service(ticket_id,user_id):
         result = []
 
         for row in messages:
-
             result.append({
-
-                "mensajeId":
-                    row.mensajeId,
-
-                "ticketId":
-                    row.ticketId,
-
-                "mensaje":
-                    row.mensaje,
-
-                "fechaMensaje":
-                    str(row.fechaMensaje),
-
+                "mensajeId":row.mensajeId,
+                "ticketId":row.ticketId,
+                "mensaje":row.mensaje,
+                "fechaMensaje":str(row.fechaMensaje),
                 "usuario": {
-
-                    "userId":
-                        row.userId,
-
-                    "nombre":
-                        row.nombreCompleto
+                    "userId":row.userId,
+                    "nombre":row.nombreCompleto
                 },
-                "mine":
-                    row.userId == user_id
+                "mine":row.userId == user_id,
+                "archivo":{
+                    "archivoId":row.adjuntoId,
+                    "nomArchivo":row.nomArchivo,
+                    "extension":row.tipoArchivo
+                }
             })
 
         return {
             "Mensaje":
                 "Mensajes obtenidos correctamente",
-
             "mensajes":
                 result
         }
@@ -134,7 +123,7 @@ def crear_mensaje_service(user_id,data,files):
 
         attachments = []
 
-        if files:
+        if files:   
 
             attachments = save_attachments(cursor,ticket_id,mensaje_id,user_id,files)
 
@@ -150,13 +139,15 @@ def crear_mensaje_service(user_id,data,files):
             "ticketId": message.ticketId,
             "mensaje": message.mensaje,
             "fechaMensaje": str(message.fechaMensaje),
-
             "usuario": {
                 "userId": message.userId,
                 "nombre": message.nombreCompleto
             },
-
-            "adjuntos": attachments
+            "archivo":{
+                "archivoId":attachments.adjuntoId,
+                "nomArchivo":attachments.nomArchivo,
+                "extension":attachments.tipoArchivo
+                }
         }
 
         socketio.emit(

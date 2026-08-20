@@ -1,8 +1,10 @@
 from app.database.connection import get_connection
 from app.utils.permisos import resolve_creation_mode
 from app.utils.ticket_nro import generate_ticket_number
-from app.utils.crear_ticket import build_payload, insert_ticket, save_attachments, insert_history, save_uploaded_file, update_ticket_number, insert_initial_message
+from app.utils.crear_ticket import *
+from app.utils.solicitante import *
 from datetime import datetime
+from flask import send_from_directory
 import math
 
 def ver_tickets(userId, permisos, request):
@@ -66,6 +68,8 @@ def ver_tickets(userId, permisos, request):
     sql_total = f"""SELECT COUNT(*) as total 
                     FROM [MesaDeAyuda].[dbo].[v_lista_tickets]
                     {where_clause}"""
+    
+    print(sql_total)
 
     sql_tickets = f"""SELECT * 
                         FROM [MesaDeAyuda].[dbo].[v_lista_tickets]
@@ -83,7 +87,7 @@ def ver_tickets(userId, permisos, request):
 
         offset = (pagina-1)*12
 
-        cursor.execute(sql_tickets, *params, offset)
+        cursor.execute(sql_tickets, params + [offset])
 
         columns = [column[0] for column in cursor.description]
 
@@ -107,7 +111,20 @@ def ver_tickets(userId, permisos, request):
     
 def crear_tickets_service(user_id, permisos, data, files):
 
+    print(data)
+    
+    validacion = validate_ticket_data(data)
+
+    if not validacion["valido"]:
+
+        return {
+            "Mensaje":"Datos faltantes",
+            "Error": validacion["errores"]
+        }, 400
+
     mode = resolve_creation_mode(permisos)
+
+    print(f'mode: {mode}')
 
     payload = build_payload(
         mode,
@@ -115,14 +132,20 @@ def crear_tickets_service(user_id, permisos, data, files):
         data
     )
 
-    print(payload)
+    print(f'payload: {payload}')
 
     try:
 
         conn = get_connection()
         cursor = conn.cursor()
 
+        resolve_solicitante_for_payload(cursor, mode, payload, data)
+
+        print(payload["usuarioSolicitudTicket"])
+        print(payload["solicitanteTicket"])
+
         ticket_id = insert_ticket(cursor, payload)
+        print(ticket_id)
         nro_ticket = generate_ticket_number(ticket_id)
         update_ticket_number(cursor, ticket_id, nro_ticket)
         mensaje_id = insert_initial_message(cursor, ticket_id, payload["ticketDesc"], user_id)
@@ -141,10 +164,304 @@ def crear_tickets_service(user_id, permisos, data, files):
         return {
             'Mensaje':'Error creando Ticket', 
             'Error':str(e)
-        }
+        }, 400
     finally:
         cursor.close()
         conn.close()
 
-def ver_detalle_ticket():
-    return "hola"
+def ver_detalle_ticket(ticket_id, user_id, permisos):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        sql = "SELECT * FROM [MesaDeAyuda].[dbo].[v_detalle_tickets] where ticketId = ?"
+
+        cursor.execute(sql, ticket_id)
+
+        data = cursor.fetchone()
+
+        if data is None:
+            return {
+                'Mensaje':'No se ha encontrado el Ticket'
+            },404
+        
+        usuario_solicitud = data[13]
+        
+        if not 'VER_TICKETS_TODOS' in permisos and usuario_solicitud != user_id:
+            return {
+                'Mensaje':'Sin permisos'
+            },403
+            
+        columns = [col[0] for col in cursor.description]
+        ticket = dict(zip(columns, data))
+
+        return {
+            'Mensaje':'Ticket obtenido correctamente',
+            'Ticket':ticket
+        }
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo datos',
+            'Error':str(e)
+        }
+    
+def ver_categorias():
+    sql = 'SELECT * FROM [MesaDeAyuda].[dbo].[categoria]'
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(sql)
+        columns = [col[0] for col in cursor.description]
+        categorias = [
+            dict(zip(columns, row))
+            for row in cursor.fetchall()
+        ]
+
+        return {
+            'Mensaje':'Categorias obtenidas correctamente',
+            'Categorias': categorias
+        }
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo datos',
+            'Error':str(e)
+        }
+
+def editar_categoria_service(id, data):
+    categoria = data['categoria']
+    color = data['color']
+    activo = bool(data['activo'])
+    adminflg = bool(data['adminflg'])
+    sql = """
+            UPDATE [MesaDeAyuda].[dbo].[categoria] SET 
+                categoria = ?,
+                color = ?,
+                activo = ?,
+                adminflg = ? 
+            WHERE categoriaId = ?
+            """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(sql, (categoria, color, activo, adminflg, id))
+
+        cursor.commit()
+        cursor.close()
+
+        return {
+            'Mensaje':'Cambio realizado'
+        }, 200
+    except Exception as e:
+        return {
+            'Mensaje':'Error modificando registro',
+            'Error':str(e)
+        }, 400
+
+def ver_subcategorias(categoria_id):
+    sql = 'SELECT * FROM [MesaDeAyuda].[dbo].[subCategoriaTicket] WHERE categoriaId = ?'
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(sql, categoria_id)
+        columns = [col[0] for col in cursor.description]
+        Subcategorias = [
+            dict(zip(columns, row))
+            for row in cursor.fetchall()
+        ]
+
+        return {
+            'Mensaje':'Subcategorias obtenidas correctamente',
+            'Subcategorias': Subcategorias
+        }
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo datos',
+            'Error':str(e)
+        }, 400
+
+def ver_dashboard():
+    sql_estado = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_estado] WHERE estadoTicketId not in (4,5,7)'
+    sql_hoy = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_hoy]'
+    sql_30_dias = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_ultimos_30_dias]'
+    sql_categoria = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_categoria]'
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(sql_estado)
+        estados = [
+            {
+                "estadoTicketId": row.estadoTicketId,
+                "nombre": row.estadoTicket,
+                "cantidad": row.CantTickets
+            }
+            for row in cursor.fetchall()
+        ]
+
+        cursor.execute(sql_hoy)
+
+        hoy = cursor.fetchone().TicketsHoy
+
+        cursor.execute(sql_30_dias)
+
+        ultimos_30_dias = [
+            {
+                "fecha": str(row.fecha),
+                "cantidad": row.CantTickets
+            }
+            for row in cursor.fetchall()
+        ]
+        cursor.execute(sql_categoria)
+
+        categorias = [
+            {
+                "categoriaId": row.categoriaId,
+                "nombre": row.categoria,
+                "cantidad": row.CantTickets
+            }
+            for row in cursor.fetchall()
+        ]
+
+        return {
+            "ticketsHoy": hoy,
+            "porEstado": estados,
+            "ultimos30Dias": ultimos_30_dias,
+            "porCategoria": categorias
+        }
+
+    finally:
+
+        cursor.close()
+        conn.close()
+
+def ver_tecnicos():
+    sql = """SELECT	userId,
+                    CONCAT(userNom, ' ', userApPat, ' ' ,userApMat) as 'Nombre',
+                    rolId
+            FROM [MesaDeAyuda].[dbo].[usuario]
+            WHERE rolId in (1,2,3)"""
+    
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(sql)
+        columns = [col[0] for col in cursor.description]
+        tecnicos = [
+            dict(zip(columns, row))
+            for row in cursor.fetchall()
+        ]
+
+        return {
+            'Mensaje':'Tecnicos obtenidos correctamente',
+            'Tecnicos':tecnicos
+        }
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo los datos',
+            'Error':str(e)
+        }, 400
+    
+def solicitante_services(correo):
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        usuario = find_usuario_by_email(cursor, correo)
+
+        if usuario:
+            return {
+                'tipo': 'USUARIO',
+                'usuarioId': usuario["userId"],
+                'nombre': usuario['nombre'],
+                'telefono': usuario['telefono']
+            }
+
+        solicitante = find_solicitante_by_email(cursor, correo)
+
+        if solicitante:
+            return {
+                'tipo': 'SOLICITANTE_EXISTENTE',
+                'solicitanteId': solicitante["solicitanteId"],
+                'nombre': solicitante["nombre"],
+                'telefono': solicitante["telefono"]
+            }
+
+        return {
+            'tipo': 'SOLICITANTE_NUEVO'
+        }
+
+    except Exception as e:
+        return {
+            'Mensaje':'Error buscando solicitante',
+            'Error':str(e)
+        }, 400
+    finally:
+        cursor.close()
+        conn.close()
+
+def tipo_ticket_service():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        sql = "SELECT * FROM [MesaDeAyuda].[dbo].[tipoTicket]"
+
+        cursor.execute(sql)
+        columns = [col[0] for col in cursor.description]
+        tipos_ticket = [
+            dict(zip(columns, row))
+            for row in cursor.fetchall()
+        ]
+
+        return {
+            'Mensaje':'Tipos de ticket obtenidos con exito',
+            'TipoTicket':tipos_ticket
+        }
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo los datos',
+            'Error':str(e)
+        }, 400
+
+def obtener_archivos_service(adjunto_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+            adjuntoId,
+            nomArchivo,
+            tipoArchivo
+        FROM adjunto
+        WHERE adjuntoId = ?
+        """, adjunto_id)
+
+        adjunto = cursor.fetchone()
+
+        if not adjunto:
+            return {
+                'Mensaje':'Archivo no encontrado'
+            }, 404
+
+        return send_from_directory(
+            UPLOAD_FOLDER,
+            adjunto.nomArchivo,
+            as_attachment=True,
+            download_name=adjunto.nomArchivo
+        )
+    finally:
+        cursor.close()
+        conn.close()
+
+def crear_tipo_ticket_service():
+    
+    return ''

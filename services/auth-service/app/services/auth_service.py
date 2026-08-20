@@ -19,11 +19,11 @@ def register_user(data):
 
         cursor.execute("""
             INSERT INTO     [MesaDeAyuda].[dbo].[usuario] 
-                            ([username], [userNom], [userApPat], [userApMat], 
+                            ([userNom], [userApPat], [userApMat], 
                             [userMail], [userTelMovil], [userTelFijo], 
                             [departamentoId], [password], [rolId], [changePassFlg], [ActiveFlg]) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (data["username"], data['userNom'], data['userApPat'], data['userApMat'], 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (data['userNom'], data['userApPat'], data['userApMat'], 
             data['userMail'], data["userTelMovil"], data["userTelFijo"], data['departamento'], 
             hashed_pw, data['rol'], 1, 1))
 
@@ -32,7 +32,6 @@ def register_user(data):
         return {"message": "Usuario creado"}
     
     except Exception as e:
-        print(e)
         return {"error": str(e)}, 400
 
 def login_user(data):

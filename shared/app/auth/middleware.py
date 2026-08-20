@@ -6,13 +6,11 @@ def auth_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         token = request.cookies.get("access_token")
-        print(token)
 
         if not token:
             return {"error": "No autenticado"}, 401
 
         data = verify_token(token)
-        print(data)
 
         if not data:
             return {"error": "Token inválido"}, 401

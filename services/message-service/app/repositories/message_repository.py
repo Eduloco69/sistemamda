@@ -14,15 +14,18 @@ def get_ticket_messages_query(cursor, ticket_id):
                 u.userNom,
                 ' ',
                 u.userApPat
-            ) as nombreCompleto
+            ) as nombreCompleto,
+            a.adjuntoId,
+            a.nomArchivo,
+            a.tipoArchivo
 
         FROM mensajesTicket m
 
         INNER JOIN usuario u
             ON m.userMensaje = u.userId
-
+        LEFT JOIN adjunto a
+            ON m.mensajeId = a.mensajeId
         WHERE m.ticketId = ?
-
         ORDER BY m.fechaMensaje ASC
         """,
         ticket_id
@@ -68,10 +71,7 @@ def insert_message_query(
     return row[0]
 
 
-def get_message_by_id_query(
-    cursor,
-    mensaje_id
-):
+def get_message_by_id_query(cursor,mensaje_id):
 
     cursor.execute(
         """

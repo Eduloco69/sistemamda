@@ -4,7 +4,6 @@
 
 CREATE TABLE [usuario] (
   [userId] int IDENTITY(1,1) PRIMARY KEY,
-  [username] varchar(15) UNIQUE,
   [userNom] varchar(30),
   [userApPat] varchar(30),
   [userApMat] varchar(30),
@@ -14,10 +13,10 @@ CREATE TABLE [usuario] (
   [departamentoId] int,
   [password] varchar(255) NOT NULL,
   [rolId] int NOT NULL,
-  [ActiveFlg] bit NOT NULL DEFAULT (0),
   [fechaCreacion] datetime DEFAULT (GETDATE()),
   [fechaTerminoVig] datetime,
-  [changePassFlg] bit NOT NULL DEFAULT (0)
+  [ActiveFlg] bit NOT NULL DEFAULT (1),
+  [changePassFlg] bit NOT NULL DEFAULT (1)
 )
 GO
 
@@ -53,7 +52,10 @@ GO
 
 CREATE TABLE [tipoTicket] (
   [tipoTicketId] int PRIMARY KEY,
-  [tipoTicket] varchar(50)
+  [tipoTicket] varchar(50),
+  [color] varchar(7),
+  [activo] bit NOT NULL DEFAULT (1),
+  [adminflg] bit NOT NULL DEFAULT (0)
 )
 GO
 
@@ -64,15 +66,20 @@ CREATE TABLE [estadoTicket] (
 GO
 
 CREATE TABLE [subCategoriaTicket] (
-  [subCatId] int PRIMARY KEY IDENTITY(1,1),
+  [subCatId] int PRIMARY KEY IDENTITY(1, 1),
   [subCat] varchar(50),
-  [categoriaId] int
+  [categoriaId] int,
+  [activo] bit NOT NULL DEFAULT (1),
+  [adminflg] bit NOT NULL DEFAULT (0)
 )
 GO
 
 CREATE TABLE [categoria] (
-  [categoriaId] int PRIMARY KEY IDENTITY(1,1),
-  [categoria] varchar(50)
+  [categoriaId] int PRIMARY KEY IDENTITY(1, 1),
+  [categoria] varchar(50),
+  [color] varchar(7),
+  [activo] bit NOT NULL DEFAULT (1),
+  [adminflg] bit NOT NULL DEFAULT (0)
 )
 GO
 
@@ -145,7 +152,7 @@ CREATE TABLE [solicitante] (
 GO
 
 CREATE TABLE [departamento] (
-  [departamentoId] int PRIMARY KEY IDENTITY(1,1),
+  [departamentoId] int PRIMARY KEY IDENTITY(1, 1),
   [nombre] varchar(50),
   [tipoDepartamento] varchar(20)
 )
@@ -159,9 +166,26 @@ CREATE TABLE [permisos] (
 GO
 
 CREATE TABLE [rolPermiso] (
-  [id] int PRIMARY KEY IDENTITY(1,1),
+  [id] int PRIMARY KEY IDENTITY(1, 1),
   [rolId] int,
   [permisoId] int
+)
+GO
+
+CREATE TABLE [empresas] (
+  [empresaId] int PRIMARY KEY IDENTITY(1, 1),
+  [nomEmpresa] nvarchar(255),
+  [color] varchar(7)
+)
+GO
+
+CREATE TABLE [derivacionTicket] (
+  [derivacionId] int PRIMARY KEY IDENTITY(1, 1),
+  [ticketId] int,
+  [empresaId] int,
+  [nroTicket] varchar(15),
+  [fechaDerivacion] datetime,
+  [derivacionFinalizada] bit NOT NULL DEFAULT (0)
 )
 GO
 
@@ -235,4 +259,10 @@ ALTER TABLE [rolPermiso] ADD FOREIGN KEY ([permisoId]) REFERENCES [permisos] ([p
 GO
 
 ALTER TABLE [rolPermiso] ADD FOREIGN KEY ([rolId]) REFERENCES [rol] ([rolId])
+GO
+
+ALTER TABLE [derivacionTicket] ADD FOREIGN KEY ([ticketId]) REFERENCES [ticket] ([ticketId])
+GO
+
+ALTER TABLE [derivacionTicket] ADD FOREIGN KEY ([empresaId]) REFERENCES [empresas] ([empresaId])
 GO

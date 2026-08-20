@@ -38,9 +38,3 @@ def get_perfil():
     data = perfil_user(user_id)
 
     return jsonify(data)
-
-def verificar_sesion():
-    user_id = request.user["userId"]
-    return ""
-
-    

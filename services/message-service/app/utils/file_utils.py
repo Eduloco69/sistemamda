@@ -2,40 +2,46 @@ import os
 from werkzeug.utils import secure_filename
 
 
-UPLOAD_FOLDER = "/app/uploads"
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
 
 
-def save_attachments(
-    files,
-    ticket_id,
-    mensaje_id
-):
-    os.makedirs(
-        UPLOAD_FOLDER,
-        exist_ok=True
-    )
+def save_attachments(cursor,ticket_id,mensaje_id,user_id,files):
 
-    saved_files = []
-
+    adjuntos = []
 
     for file in files:
 
-        filename = secure_filename(
-            file.filename
+        os.makedirs(
+            UPLOAD_FOLDER,
+            exist_ok=True
         )
 
-        filepath = os.path.join(
+        if file.filename == "":
+            continue
+
+        filename = secure_filename(file.filename)
+
+        file_path = os.path.join(
             UPLOAD_FOLDER,
             filename
         )
 
-        file.save(
-            filepath
+        file.save(file_path)
+
+        extension = filename.rsplit(".", 1)[-1] if "." in filename else ""
+
+        cursor.execute(
+            """
+            INSERT INTO adjunto (ticketId,mensajeId,nomArchivo,tipoArchivo,fechaArchivo,usuarioAdjunto) VALUES (?,?,?,?,GETDATE(),?)
+            """,(ticket_id,mensaje_id,filename,extension,user_id)
         )
 
-        saved_files.append({
+        adjunto_id = cursor.fetchone()[0]
+
+        adjuntos.append({
+            "adjuntoId": adjunto_id,
             "nombre": filename,
-            "path": filepath
+            "extension": extension
         })
 
-    return saved_files
+    return adjuntos
