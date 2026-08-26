@@ -175,7 +175,8 @@ GO
 CREATE TABLE [empresas] (
   [empresaId] int PRIMARY KEY IDENTITY(1, 1),
   [nomEmpresa] nvarchar(255),
-  [color] varchar(7)
+  [color] varchar(7),
+  [activo] bit NOT NULL DEFAULT (0)
 )
 GO
 

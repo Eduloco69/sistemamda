@@ -3,9 +3,12 @@ import {useNavigate} from "react-router-dom"
 import api from "../services/api"
 import "../styles/Tickets.css"
 
+import useAuth from "../hooks/useAuth";
+
 export default function Tickets() {
 
   const navigate = useNavigate()
+  const { hasPermission } = useAuth();
 
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -24,6 +27,18 @@ export default function Tickets() {
     fechaDesde: "",
     fechaHasta: ""
   })
+
+  const esAdmin = hasPermission("CREAR_TICKETS_ADMIN");
+  const esTecnico = hasPermission("CREAR_TICKET_TEC");
+  const esUsuario = hasPermission("CREAR_TICKETS");
+
+  const modo = esAdmin
+        ? "admin"
+        : esTecnico
+            ? "tecnico"
+            : esUsuario
+                ? "usuario"
+                : null;
 
   async function fetchTickets() {
     try {
@@ -45,8 +60,20 @@ export default function Tickets() {
 
   async function fetchCategorias() {
     try {
-      const response = await api.get("/ticket/categoria")
-      setCategorias(response.data.Categorias || [])
+      const response = await api.get("/categoria")
+
+      const categoriasActivas = (
+        response.data.Categorias || []
+      ).filter(categoria => {
+        if (categoria.activo !== true) {
+          return false;
+        }
+        if (!esAdmin && categoria.adminflg !== true) {
+          return false;
+        }
+        return true;
+      })
+      setCategorias(categoriasActivas || [])
     } catch (error) {
       console.error("Error cargando categorías:", error)
     }
@@ -58,8 +85,19 @@ export default function Tickets() {
       return
     }
     try {
-      const response = await api.get(`/ticket/subcategoria/${categoriaId}`)
-      setSubcategorias(response.data.Subcategorias || [])
+      const response = await api.get(`/categoria/subcategoria/${categoriaId}`)
+      const subcategoriasActivas = (
+        response.data.Subcategorias || []
+      ).filter(subcategoria => {
+        if (subcategoria.activo !== true) {
+          return false;
+        }
+        if (!esAdmin && categoria.adminflg !== true) {
+          return false
+        }
+        return true;
+      })
+      setSubcategorias(subcategoriasActivas || [])
     } catch (error) {
       console.error("Error cargando subcategorías:", error)
     }
@@ -206,7 +244,9 @@ export default function Tickets() {
             onClick={() => navigate(`/tickets/${ticket.ticketId}`)}
           >
             <div className="ticket-header">
-              <span className="ticket-category">
+              <span className="ticket-category" style={{
+                backgroundColor: ticket.color, 
+                color: "#fff"}}>
                 {ticket.categoria}
               </span>
               <span className={`priority ${ticket.prioridadTicket}`}>

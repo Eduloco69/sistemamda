@@ -9,6 +9,7 @@ import useAuth from "./hooks/useAuth"
 import CreateTicket from "./pages/CreateTicket"
 import Configuracion from "./pages/Configuracion"
 import Categorias from "./pages/categorias"
+import Empresas from "./pages/Empresas"
 
 export default function App() {
 
@@ -85,6 +86,13 @@ export default function App() {
           path="/configuracion/categorias"
           element={
             <Categorias />
+          }
+        />
+
+        <Route
+          path="/configuracion/empresas"
+          element={
+            <Empresas />
           }
         />
 

@@ -5,9 +5,9 @@ def obtener_tickets():
     data = request.user
     user_id = data.get("userId")
     permisos = data.get("permisos", [])
-    tickets = ver_tickets(user_id, permisos, request)
+    r, s = ver_tickets_service(user_id, permisos, request)
 
-    return jsonify(tickets)
+    return jsonify(r), s
 
 def crear_ticket():
     user_data = request.user
@@ -17,37 +17,36 @@ def crear_ticket():
     data = request.form.to_dict()
     files = request.files.getlist("files")
 
-    return crear_tickets_service(user_id, permisos, data, files)
+    r, s = crear_tickets_service(user_id, permisos, data, files)
+
+    return jsonify(r), s
 
 def obtener_detalle(ticket_id):
     user_data = request.user
     user_id = user_data.get('userId')
     permisos = user_data.get('permisos', [])
 
-    return ver_detalle_ticket(ticket_id, user_id, permisos)
+    r, s = ver_detalle_ticket_service(ticket_id, user_id, permisos)
 
-def obtener_categorias():
-    return ver_categorias()
-
-def modificar_categoria(id):
-    data = request.json
-    return editar_categoria_service(id, data)
-
-def obtener_subcategorias(categoria_id):
-    return ver_subcategorias(categoria_id)
+    return jsonify(r), s
 
 def obtener_dashboard():
-    return ver_dashboard()
+    r, s = ver_dashboard_service()
+    return jsonify(r), s
 
 def obtener_tecnicos():
-    return ver_tecnicos()
+    r, s = ver_tecnicos()
+    return jsonify(r), s
 
 def obtener_solicitante():
     correo = request.args.get('correo')
-    return solicitante_services(correo)
+    r, s = solicitante_services(correo)
+    return jsonify(r), s
 
 def obtener_tipo_ticket():
-    return tipo_ticket_service()
+    r, s = tipo_ticket_service()
+    return jsonify(r), s
 
 def archivo_controller(adjunto_id):
-    return obtener_archivos_service(adjunto_id)
+    r, s = obtener_archivos_service(adjunto_id)
+    return jsonify(r), s

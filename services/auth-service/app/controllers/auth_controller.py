@@ -3,16 +3,17 @@ from app.services.auth_service import register_user, login_user, perfil_user
 
 def register():
     data = request.json
-    return jsonify(register_user(data))
+    r, s = register_user(data)
+    return jsonify(r), s
 
 def login():
     data = request.json
-    result = login_user(data)
+    r, s = login_user(data)
 
-    if "error" in result:
-        return jsonify(result), 401
+    if "error" in r:
+        return jsonify(r), s
 
-    token = result["token"]
+    token = r["token"]
 
     response = make_response({"message": "Login exitoso"})
 
@@ -34,7 +35,6 @@ def logout():
 
 def get_perfil():
     user_id = request.user["userId"]
+    r, s = perfil_user(user_id)
 
-    data = perfil_user(user_id)
-
-    return jsonify(data)
+    return jsonify(r), s

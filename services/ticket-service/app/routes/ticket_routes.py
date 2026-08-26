@@ -23,20 +23,6 @@ def post_ticket():
 def get_detalle_ticket(ticket_id):
     return obtener_detalle(ticket_id)
 
-@ticket_bp.route("/categoria", methods=['GET'])
-@auth_required
-def get_categoria():
-    return obtener_categorias()
-
-@ticket_bp.route("/categoria/<int:id>", methods=['PUT'])
-def put_categoria(id):
-    return modificar_categoria(id)
-
-@ticket_bp.route("/subcategoria/<int:categoria_id>", methods=['GET'])
-@auth_required
-def get_subcategoria(categoria_id):
-    return obtener_subcategorias(categoria_id)
-
 @ticket_bp.route("/dashboard", methods=['GET'])
 @auth_required
 def get_dashboard():

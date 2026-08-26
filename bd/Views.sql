@@ -10,6 +10,7 @@ CREATE OR ALTER VIEW v_lista_tickets as (
           ,d.[prioridadTicket]
           ,f.[categoriaId]
           ,f.[categoria]
+          ,f.[color]
           ,e.subCat
           ,e.subCatId
           ,a.usuarioSolicitudTicket

@@ -58,7 +58,7 @@ export default function CreateTicket() {
         try {
             const [tiposRes, categoriasRes] = await Promise.all([
                 api.get("/ticket/tipoticket"),
-                api.get("/ticket/categoria")
+                api.get("/categoria")
             ]);
 
             setTipos(tiposRes.data.TipoTicket || []);
@@ -106,7 +106,7 @@ export default function CreateTicket() {
 
         try {
             const response = await api.get(
-                `/ticket/subcategoria/${categoriaId}`
+                `/categoria/subcategoria/${categoriaId}`
             );
 
             const SubCatActivas = (
@@ -119,7 +119,7 @@ export default function CreateTicket() {
                     return false;
                 }
 8
-                return true
+                return true;
             })
 
             setSubcategorias(SubCatActivas || []);

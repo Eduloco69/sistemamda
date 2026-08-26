@@ -2,21 +2,23 @@ from app.database.connection import get_connection
 import bcrypt
 from shared.app.auth.jwt_handler import generate_token
 from app.utils.password_val import password_check
+from app.utils.password_gen import password_generator
 
 def register_user(data):
     conn = get_connection()
     cursor = conn.cursor()
 
-    if not password_check(data["password"]):
-        return {"mensaje":"Contraseña no cumple con las politicas de seguridad"}, 406
+    while True:
+        password = password_generator()
+        if password_check(password):
+            break
     
     hashed_pw = bcrypt.hashpw(
-        data["password"].encode(),
+        password.encode(),
         bcrypt.gensalt()
     ).decode()
 
     try:
-
         cursor.execute("""
             INSERT INTO     [MesaDeAyuda].[dbo].[usuario] 
                             ([userNom], [userApPat], [userApMat], 
@@ -29,18 +31,28 @@ def register_user(data):
 
         conn.commit()
 
-        return {"message": "Usuario creado"}
+        return {
+            "message": "Usuario creado",
+            "password":password
+            }, 200
     
     except Exception as e:
-        return {"error": str(e)}, 400
+        return {
+            'Mensaje':'Error con la creación del usuario',
+            "error": str(e)
+            }, 400
 
 def login_user(data):
     conn = get_connection()
     cursor = conn.cursor()
 
-    sql_login = "SELECT userId, userMail, password, rolId FROM usuario WHERE userMail = ?"
+    sql_login = """
+                SELECT userId, userMail, password, rolId, ActiveFlg, changePassFlg 
+                FROM usuario 
+                WHERE userMail = ?
+                """
 
-    sql_permisos = """
+    sql_permisos =  """
                     SELECT	a.id,
                             a.permisoId,
                             b.nomPermiso
@@ -54,10 +66,16 @@ def login_user(data):
     user_data = cursor.fetchone()
 
     if not user_data:
-        return {"error": "Usuario no existe"}, 404
+        return {"Error": "Usuario no existe"}, 404
 
     if not bcrypt.checkpw(data["password"].encode(), user_data[2].encode()):
-        return {"error": "Credenciales inválidas"}, 401
+        return {"Error": "Credenciales inválidas"}, 401
+
+    if not bool(user_data[4]):
+        return {'Error': 'Usuario no vigente en sistema'}, 401
+
+    if bool(user_data[5]):
+        return {'Error': 'usuario debe cambiar clave'}, 422
 
     cursor.execute(sql_permisos, (user_data[3]))
 
@@ -71,7 +89,9 @@ def login_user(data):
 
     token = generate_token(user)
 
-    return {"token": token}
+    return {
+        "token": token
+        }, 200
 
 def perfil_user(user_id):
     conn = get_connection()
@@ -106,4 +126,6 @@ def perfil_user(user_id):
 
     columns = [column[0] for column in cursor.description]
 
-    return dict(zip(columns, usuario))
+    response = dict(zip(columns, usuario))
+
+    return response, 200

@@ -3,11 +3,10 @@ from app.utils.permisos import resolve_creation_mode
 from app.utils.ticket_nro import generate_ticket_number
 from app.utils.crear_ticket import *
 from app.utils.solicitante import *
-from datetime import datetime
 from flask import send_from_directory
 import math
 
-def ver_tickets(userId, permisos, request):
+def ver_tickets_service(userId, permisos, request):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -69,8 +68,6 @@ def ver_tickets(userId, permisos, request):
                     FROM [MesaDeAyuda].[dbo].[v_lista_tickets]
                     {where_clause}"""
     
-    print(sql_total)
-
     sql_tickets = f"""SELECT * 
                         FROM [MesaDeAyuda].[dbo].[v_lista_tickets]
                         {where_clause}
@@ -101,7 +98,7 @@ def ver_tickets(userId, permisos, request):
             'tickets':tickets,
             'pagina_actual':pagina,
             'total_paginas':total_paginas
-        }
+        }, 200
     
     except Exception as e:
         return {
@@ -110,8 +107,6 @@ def ver_tickets(userId, permisos, request):
             }, 400
     
 def crear_tickets_service(user_id, permisos, data, files):
-
-    print(data)
     
     validacion = validate_ticket_data(data)
 
@@ -120,19 +115,15 @@ def crear_tickets_service(user_id, permisos, data, files):
         return {
             "Mensaje":"Datos faltantes",
             "Error": validacion["errores"]
-        }, 400
+        }, 406
 
     mode = resolve_creation_mode(permisos)
-
-    print(f'mode: {mode}')
 
     payload = build_payload(
         mode,
         user_id,
         data
     )
-
-    print(f'payload: {payload}')
 
     try:
 
@@ -145,7 +136,6 @@ def crear_tickets_service(user_id, permisos, data, files):
         print(payload["solicitanteTicket"])
 
         ticket_id = insert_ticket(cursor, payload)
-        print(ticket_id)
         nro_ticket = generate_ticket_number(ticket_id)
         update_ticket_number(cursor, ticket_id, nro_ticket)
         mensaje_id = insert_initial_message(cursor, ticket_id, payload["ticketDesc"], user_id)
@@ -158,7 +148,7 @@ def crear_tickets_service(user_id, permisos, data, files):
             'Mensaje':'Ticket creado correctamente',
             'ticketId':ticket_id,
             'NroTicket':nro_ticket
-        }
+        }, 200
     except Exception as e:
         conn.rollback()
         return {
@@ -169,7 +159,7 @@ def crear_tickets_service(user_id, permisos, data, files):
         cursor.close()
         conn.close()
 
-def ver_detalle_ticket(ticket_id, user_id, permisos):
+def ver_detalle_ticket_service(ticket_id, user_id, permisos):
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -190,7 +180,7 @@ def ver_detalle_ticket(ticket_id, user_id, permisos):
         if not 'VER_TICKETS_TODOS' in permisos and usuario_solicitud != user_id:
             return {
                 'Mensaje':'Sin permisos'
-            },403
+            }, 403
             
         columns = [col[0] for col in cursor.description]
         ticket = dict(zip(columns, data))
@@ -198,93 +188,14 @@ def ver_detalle_ticket(ticket_id, user_id, permisos):
         return {
             'Mensaje':'Ticket obtenido correctamente',
             'Ticket':ticket
-        }
-    except Exception as e:
-        return {
-            'Mensaje':'Error obteniendo datos',
-            'Error':str(e)
-        }
-    
-def ver_categorias():
-    sql = 'SELECT * FROM [MesaDeAyuda].[dbo].[categoria]'
-
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute(sql)
-        columns = [col[0] for col in cursor.description]
-        categorias = [
-            dict(zip(columns, row))
-            for row in cursor.fetchall()
-        ]
-
-        return {
-            'Mensaje':'Categorias obtenidas correctamente',
-            'Categorias': categorias
-        }
-    except Exception as e:
-        return {
-            'Mensaje':'Error obteniendo datos',
-            'Error':str(e)
-        }
-
-def editar_categoria_service(id, data):
-    categoria = data['categoria']
-    color = data['color']
-    activo = bool(data['activo'])
-    adminflg = bool(data['adminflg'])
-    sql = """
-            UPDATE [MesaDeAyuda].[dbo].[categoria] SET 
-                categoria = ?,
-                color = ?,
-                activo = ?,
-                adminflg = ? 
-            WHERE categoriaId = ?
-            """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute(sql, (categoria, color, activo, adminflg, id))
-
-        cursor.commit()
-        cursor.close()
-
-        return {
-            'Mensaje':'Cambio realizado'
         }, 200
     except Exception as e:
         return {
-            'Mensaje':'Error modificando registro',
-            'Error':str(e)
-        }, 400
-
-def ver_subcategorias(categoria_id):
-    sql = 'SELECT * FROM [MesaDeAyuda].[dbo].[subCategoriaTicket] WHERE categoriaId = ?'
-
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute(sql, categoria_id)
-        columns = [col[0] for col in cursor.description]
-        Subcategorias = [
-            dict(zip(columns, row))
-            for row in cursor.fetchall()
-        ]
-
-        return {
-            'Mensaje':'Subcategorias obtenidas correctamente',
-            'Subcategorias': Subcategorias
-        }
-    except Exception as e:
-        return {
             'Mensaje':'Error obteniendo datos',
             'Error':str(e)
         }, 400
 
-def ver_dashboard():
+def ver_dashboard_service():
     sql_estado = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_estado] WHERE estadoTicketId not in (4,5,7)'
     sql_hoy = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_hoy]'
     sql_30_dias = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_ultimos_30_dias]'
@@ -333,8 +244,12 @@ def ver_dashboard():
             "porEstado": estados,
             "ultimos30Dias": ultimos_30_dias,
             "porCategoria": categorias
-        }
-
+        }, 200
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo datos',
+            'Error':str(e)
+        }, 400
     finally:
 
         cursor.close()
@@ -361,7 +276,7 @@ def ver_tecnicos():
         return {
             'Mensaje':'Tecnicos obtenidos correctamente',
             'Tecnicos':tecnicos
-        }
+        }, 200
     except Exception as e:
         return {
             'Mensaje':'Error obteniendo los datos',
@@ -392,11 +307,11 @@ def solicitante_services(correo):
                 'solicitanteId': solicitante["solicitanteId"],
                 'nombre': solicitante["nombre"],
                 'telefono': solicitante["telefono"]
-            }
+            }, 200
 
         return {
             'tipo': 'SOLICITANTE_NUEVO'
-        }
+        }, 200
 
     except Exception as e:
         return {
@@ -424,7 +339,7 @@ def tipo_ticket_service():
         return {
             'Mensaje':'Tipos de ticket obtenidos con exito',
             'TipoTicket':tipos_ticket
-        }
+        }, 200
     except Exception as e:
         return {
             'Mensaje':'Error obteniendo los datos',
@@ -432,10 +347,10 @@ def tipo_ticket_service():
         }, 400
 
 def obtener_archivos_service(adjunto_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-
     try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
         cursor.execute("""
             SELECT
             adjuntoId,
@@ -452,16 +367,20 @@ def obtener_archivos_service(adjunto_id):
                 'Mensaje':'Archivo no encontrado'
             }, 404
 
-        return send_from_directory(
+        r = send_from_directory(
             UPLOAD_FOLDER,
             adjunto.nomArchivo,
             as_attachment=True,
             download_name=adjunto.nomArchivo
         )
+
+        return r, 200
+    
+    except Exception as e:
+        return {
+            'Mensaje':'Error obteniendo archivo',
+            'Error':str(e)
+        }, 400
     finally:
         cursor.close()
         conn.close()
-
-def crear_tipo_ticket_service():
-    
-    return ''

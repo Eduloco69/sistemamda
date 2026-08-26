@@ -69,8 +69,6 @@ def insert_ticket(cursor,p):
 
     row = cursor.fetchone()
 
-    print(row)
-
     return row[0]
 
 def resolve_solicitante_for_payload(cursor, mode, payload, data):

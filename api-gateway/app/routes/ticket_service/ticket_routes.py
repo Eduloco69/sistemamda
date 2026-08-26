@@ -18,14 +18,6 @@ def obtener():
 def detalle(ticket_id):
     return proxy_request(f"{TICKET_SERVICE}/ticket/detalle/{ticket_id}")
 
-@ticket_bp.route("/categoria", methods=['GET'])
-def categoria():
-    return proxy_request(f"{TICKET_SERVICE}/ticket/categoria")
-
-@ticket_bp.route("/subcategoria/<int:categoria_id>", methods=['GET'])
-def subcategoria(categoria_id):
-    return proxy_request(f"{TICKET_SERVICE}/ticket/subcategoria/{categoria_id}")
-
 @ticket_bp.route("/dashboard", methods=['GET'])
 def dashboard():
     return proxy_request(f"{TICKET_SERVICE}/ticket/dashboard")
