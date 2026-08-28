@@ -14,6 +14,22 @@ def login():
 def perfil():
     return proxy_request(f"{AUTH_SERVICE}/auth/perfil")
 
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    return proxy_request(f"{AUTH_SERVICE}/auth/logout")
+
 @auth_bp.route("/verify", methods=['GET'])
 def verify():
     return proxy_request(f"{AUTH_SERVICE}/auth/verify")
+
+@auth_bp.route("/token", methods=['GET'])
+def validar_token():
+    return proxy_request(f"{AUTH_SERVICE}/auth/token")
+
+@auth_bp.route("/cambiar_contraseña", methods=['POST'])
+def cambiar_contraseña():
+    return proxy_request(f"{AUTH_SERVICE}/auth/cambiar_contraseña")
+
+@auth_bp.route("/recuperar_contraseña", methods=['POST'])
+def recuperar_contraseña():
+    return proxy_request(f"{AUTH_SERVICE}/auth/recuperar_contraseña")

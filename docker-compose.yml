@@ -43,6 +43,16 @@ services:
       - ./shared:/shared
       - C:/Users/ebravo/Desktop/archivos:/app/uploads
 
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "5004:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./services/notification-service:/app
+      - ./shared:/shared
+
   frontend:
     build: ./frontend
     container_name: mda-frontend

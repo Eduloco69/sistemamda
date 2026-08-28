@@ -190,6 +190,16 @@ CREATE TABLE [derivacionTicket] (
 )
 GO
 
+CREATE TABLE [TokenChangePass] (
+	[tokenId] int PRIMARY KEY IDENTITY(1, 1),
+	[usuarioId] int,
+	[tokenHash] varchar(64),
+	[fechaCreacion] datetime,
+	[fechaExpiracion] datetime,
+	[usado] bit NOT NULL DEFAULT (0),
+	[fechaUso] datetime
+)
+
 ALTER TABLE [usuario] ADD FOREIGN KEY ([rolId]) REFERENCES [rol] ([rolId])
 GO
 

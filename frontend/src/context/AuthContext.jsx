@@ -1,30 +1,24 @@
 import { createContext, useEffect, useState } from "react"
-
 import api from "../services/api"
 
-
 export const AuthContext = createContext()
-
 
 export default function AuthProvider({ children }) {
 
   const [user, setUser] = useState(null)
-
   const [loading, setLoading] = useState(true)
 
-
   useEffect(() => {
-
     verifySession()
-
   }, [])
-
 
   async function verifySession() {
 
     try {
 
-      const response = await api.get("/auth/verify")
+      const response = await api.get(
+        "/auth/verify"
+      )
 
       setUser(response.data)
 
@@ -39,21 +33,24 @@ export default function AuthProvider({ children }) {
     }
   }
 
-
   async function login(email, password) {
-    console.log("Intentando login...")
 
-    const response = await api.post(
-      "/auth/login",
-      {
-        email,
-        password
-      }
-    )
+    try {
 
-    await verifySession()
+      const response = await api.post(
+        "/auth/login",
+        {
+          email,
+          password
+        }
+      )
+      await verifySession()
+      return response.data
+
+    } catch (error) {
+      throw error
+    }
   }
-
 
   async function logout() {
 
@@ -63,18 +60,17 @@ export default function AuthProvider({ children }) {
         "/auth/logout"
       )
 
-    } catch(error) {
+    } catch (error) {
 
       console.log(
         "Logout error:",
         error
       )
-    }
 
+    }
 
     setUser(null)
   }
-
 
   function hasPermission(permission) {
 
@@ -83,7 +79,6 @@ export default function AuthProvider({ children }) {
       || false
     )
   }
-
 
   return (
 
