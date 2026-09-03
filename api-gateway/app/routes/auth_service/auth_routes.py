@@ -11,7 +11,7 @@ def login():
     return proxy_request(f"{AUTH_SERVICE}/auth/login")
 
 @auth_bp.route("/register", methods=["POST"])
-def login():
+def register():
     return proxy_request(f"{AUTH_SERVICE}/auth/register")
 
 @auth_bp.route("/perfil", methods=["GET"])
