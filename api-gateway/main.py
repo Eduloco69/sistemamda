@@ -1,3 +1,5 @@
+import os
+from flask_cors import CORS
 from app import (create_app,socketio)
 
 from app.sockets.gateway_socket import *
@@ -9,7 +11,10 @@ from app.routes.ticket_service.empresa_routes import empresa_bp
 from app.routes.message_service.message_routes import message_bp
 from app.routes.ticket_service.categoria_routes import categoria_bp
 
+FRONTEND_URL = os.getenv('FRONTEND_URL')
+
 app = create_app()
+CORS(app, origins=FRONTEND_URL)
 
 app.register_blueprint(auth_bp,url_prefix="/auth")
 app.register_blueprint(ticket_bp,url_prefix="/ticket")
