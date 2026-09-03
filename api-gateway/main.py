@@ -14,7 +14,7 @@ from app.routes.ticket_service.categoria_routes import categoria_bp
 FRONTEND_URL = os.getenv('FRONTEND_URL')
 
 app = create_app()
-CORS(app, origins=FRONTEND_URL)
+CORS(app, resources={r"/*": {"origins": FRONTEND_URL}})
 
 app.register_blueprint(auth_bp,url_prefix="/auth")
 app.register_blueprint(ticket_bp,url_prefix="/ticket")
