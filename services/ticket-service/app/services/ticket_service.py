@@ -3,8 +3,18 @@ from app.utils.permisos import resolve_creation_mode
 from app.utils.ticket_nro import generate_ticket_number
 from app.utils.crear_ticket import *
 from app.utils.solicitante import *
-from flask import send_from_directory
+from app.utils.archivos import save_attachments
+from flask import send_from_directory, send_file
 import math
+from ftplib import FTP
+from io import BytesIO
+
+FTP_HOST = "192.168.1.110"
+FTP_PORT = 21
+FTP_USER = "educrazy"
+FTP_PASSWORD = "Cheto.2804"
+
+FTP_FOLDER = "/archivos"
 
 def ver_tickets_service(userId, permisos, request):
     conn = get_connection()
@@ -131,9 +141,6 @@ def crear_tickets_service(user_id, permisos, data, files):
         cursor = conn.cursor()
 
         resolve_solicitante_for_payload(cursor, mode, payload, data)
-
-        print(payload["usuarioSolicitudTicket"])
-        print(payload["solicitanteTicket"])
 
         ticket_id = insert_ticket(cursor, payload)
         nro_ticket = generate_ticket_number(ticket_id)
@@ -347,40 +354,77 @@ def tipo_ticket_service():
         }, 400
 
 def obtener_archivos_service(adjunto_id):
+
+    conn = None
+    cursor = None
+    ftp = None
+
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        
-        cursor.execute("""
+
+        cursor.execute(
+            """
             SELECT
-            adjuntoId,
-            nomArchivo,
-            tipoArchivo
-        FROM adjunto
-        WHERE adjuntoId = ?
-        """, adjunto_id)
+                adjuntoId,
+                nomArchivo,
+                nomOriginal,
+                tipoArchivo
+            FROM adjunto
+            WHERE adjuntoId = ?
+            """,
+            (adjunto_id,)
+        )
 
         adjunto = cursor.fetchone()
 
         if not adjunto:
             return {
-                'Mensaje':'Archivo no encontrado'
+                "Mensaje": "Archivo no encontrado"
             }, 404
 
-        r = send_from_directory(
-            UPLOAD_FOLDER,
-            adjunto.nomArchivo,
-            as_attachment=True,
-            download_name=adjunto.nomArchivo
+        ftp = FTP()
+
+        ftp.connect(
+            host=FTP_HOST,
+            port=FTP_PORT
         )
 
-        return r, 200
-    
+        ftp.login(
+            user=FTP_USER,
+            passwd=FTP_PASSWORD
+        )
+
+        ftp.cwd(FTP_FOLDER)
+
+        archivo = BytesIO()
+
+        ftp.retrbinary(
+            f"RETR {adjunto.nomArchivo}",
+            archivo.write
+        )
+        archivo.seek(0)
+
+        return send_file(
+            archivo,
+            as_attachment=True,
+            download_name=adjunto.nomOriginal
+        ), 200
+
     except Exception as e:
         return {
-            'Mensaje':'Error obteniendo archivo',
-            'Error':str(e)
+            "Mensaje": "Error obteniendo archivo",
+            "Error": str(e)
         }, 400
+
+
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+        if ftp:
+            try:
+                ftp.quit()
+            except Exception:
+                ftp.close()

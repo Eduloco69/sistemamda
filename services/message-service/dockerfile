@@ -25,4 +25,4 @@ COPY . .
 
 ENV PYTHONPATH=/:/app
 
-CMD ["python","-u","app.py"]
+CMD ["gunicorn","--worker-class", "gevent","--workers", "1","--bind", "0.0.0.0:5000","main:app"]

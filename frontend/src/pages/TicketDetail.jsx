@@ -181,7 +181,6 @@ function MessageArchivo({ archivo }) {
   )
 }
 
-
 export default function TicketDetail() {
 
   const { id } = useParams()
@@ -318,7 +317,6 @@ export default function TicketDetail() {
 
     <div className="ticket-detail-page">
 
-      {/* HEADER */}
       <div className="ticket-info-card">
 
         <div>

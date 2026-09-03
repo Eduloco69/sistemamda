@@ -16,7 +16,7 @@ def get_ticket_messages_query(cursor, ticket_id):
                 u.userApPat
             ) as nombreCompleto,
             a.adjuntoId,
-            a.nomArchivo,
+            a.nomOriginal,
             a.tipoArchivo
 
         FROM mensajesTicket m

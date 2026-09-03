@@ -1,6 +1,5 @@
 import os
 import json
-from app.utils.archivos import save_uploaded_file
 from app.utils.solicitante import resolve_solicitante
 from werkzeug.utils import secure_filename
 
@@ -117,33 +116,6 @@ def update_ticket_number(cursor,ticket_id,nro):
         """,
         (nro,ticket_id)
     )
-
-def save_attachments(cursor,ticket_id,mensaje_id,user_id,files):
-
-    for file in files:
-
-        os.makedirs(
-            UPLOAD_FOLDER,
-            exist_ok=True
-        )
-
-        if file.filename == "":
-            continue
-
-        filename = secure_filename(file.filename)
-
-        file_path = os.path.join(
-            UPLOAD_FOLDER,
-            filename
-        )
-
-        file.save(file_path)
-
-        cursor.execute(
-            """
-            INSERT INTO adjunto (ticketId,mensajeId,nomArchivo,tipoArchivo,fechaArchivo,usuarioAdjunto) VALUES (?,?,?,?,GETDATE(),?)
-            """,(ticket_id,mensaje_id,filename,filename.split(".")[-1],user_id)
-        )
 
 def insert_history(cursor,ticket_id,user_id):
 

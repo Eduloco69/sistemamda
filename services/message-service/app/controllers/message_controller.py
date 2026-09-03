@@ -13,7 +13,6 @@ def create_message():
     user = request.user
     data = request.form
     files = request.files.getlist('files')
-    print(f'archivo {files}')
     data = crear_mensaje_service(user["userId"],data,files)
 
     return jsonify(data)

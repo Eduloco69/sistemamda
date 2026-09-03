@@ -8,7 +8,6 @@ from app.routes.ticket_service.ticket_routes import ticket_bp
 from app.routes.ticket_service.empresa_routes import empresa_bp
 from app.routes.message_service.message_routes import message_bp
 from app.routes.ticket_service.categoria_routes import categoria_bp
- 
 
 app = create_app()
 

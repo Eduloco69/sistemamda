@@ -30,11 +30,6 @@ export default function Categorias() {
         cargarCategorias()
     }, [])
 
-
-    // =========================================================
-    // CARGAR CATEGORIAS
-    // =========================================================
-
     async function cargarCategorias() {
 
         try {
@@ -65,11 +60,6 @@ export default function Categorias() {
 
     }
 
-
-    // =========================================================
-    // EXPANDIR / CONTRAER CATEGORIA
-    // =========================================================
-
     async function toggleCategoria(categoriaId) {
 
         const estaAbierta =
@@ -81,12 +71,6 @@ export default function Categorias() {
         }))
 
 
-        /*
-         * Si se está abriendo la categoría
-         * y todavía no tenemos sus subcategorías,
-         * hacemos la petición.
-         */
-
         if (
             !estaAbierta &&
             subcategorias[categoriaId] === undefined
@@ -97,11 +81,6 @@ export default function Categorias() {
         }
 
     }
-
-
-    // =========================================================
-    // CARGAR SUBCATEGORIAS
-    // =========================================================
 
     async function cargarSubcategorias(categoriaId) {
 
@@ -147,11 +126,6 @@ export default function Categorias() {
         }
 
     }
-
-
-    // =========================================================
-    // EDITAR CATEGORIA
-    // =========================================================
 
     function abrirEdicion(categoria) {
 
@@ -209,11 +183,6 @@ export default function Categorias() {
         }))
 
     }
-
-
-    // =========================================================
-    // GUARDAR CATEGORIA
-    // =========================================================
 
     async function guardarCategoria() {
 
@@ -328,11 +297,6 @@ export default function Categorias() {
 
     }
 
-
-    // =========================================================
-    // CREAR CATEGORIA
-    // =========================================================
-
     async function crearCategoria() {
 
         if (!newCategoria)
@@ -390,10 +354,7 @@ export default function Categorias() {
 
 
             const categoriaId =
-                response.data?.Categoria ||
-                response.data?.categoriaId ||
-                response.data?.id
-
+                response.data?.CategoriaId
 
             setCategorias(prev => [
 
@@ -1700,6 +1661,7 @@ export default function Categorias() {
                                                     e.target.checked
                                             }))
                                         }
+                                        maxLength="40"
                                     />
 
                                     <span className="switch"></span>
@@ -1756,11 +1718,6 @@ export default function Categorias() {
 
             )}
 
-
-            {/* =================================================
-                MODAL EDITAR SUBCATEGORIA
-            ================================================= */}
-
             {editingSubcategoria && (
 
                 <div
@@ -1804,8 +1761,6 @@ export default function Categorias() {
 
                         <div className="modal-body">
 
-                            {/* NOMBRE */}
-
                             <div className="modal-form-group">
 
                                 <label>
@@ -1813,17 +1768,15 @@ export default function Categorias() {
                                 </label>
 
                                 <input
-                                    type="text"
-                                    value={
-                                        editingSubcategoria.subCat
-                                    }
-                                    onChange={e =>
-                                        setEditingSubcategoria(prev => ({
-                                            ...prev,
-                                            subCat:
-                                                e.target.value
-                                        }))
-                                    }
+                                type="text"
+                                value={editingSubcategoria.subCat}
+                                onChange={e =>
+                                    setEditingSubcategoria(prev => ({
+                                    ...prev,
+                                    subCat: e.target.value.slice(0, 5)
+                                    }))
+                                }
+                                maxLength={5}
                                 />
 
                             </div>
@@ -1836,7 +1789,6 @@ export default function Categorias() {
                                 <label>
                                     Categoría
                                 </label>
-
 
                                 <select
                                     value={

@@ -109,6 +109,7 @@ CREATE TABLE [adjunto] (
   [ticketId] int,
   [mensajeId] int,
   [nomArchivo] varchar(255),
+  [nomOriginal] varchar(255),
   [tipoArchivo] varchar(8),
   [fechaArchivo] datetime,
   [usuarioAdjunto] int

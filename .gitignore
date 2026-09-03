@@ -5,3 +5,4 @@
 */*/*/*/__pycache__/
 services/ticket-service/uploads
 frontend/.env
+docker-compose.override.yml

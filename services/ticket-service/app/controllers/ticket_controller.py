@@ -48,5 +48,4 @@ def obtener_tipo_ticket():
     return jsonify(r), s
 
 def archivo_controller(adjunto_id):
-    r, s = obtener_archivos_service(adjunto_id)
-    return jsonify(r), s
+    return obtener_archivos_service(adjunto_id)

@@ -1,78 +1,79 @@
-version: "3.9"
-
 services:
 
   gateway:
     build: ./api-gateway
     ports:
-      - "5000:5000"
+      - "5000:8000"
     env_file:
       - .env
-    volumes:
-      - ./api-gateway:/app
+    networks:
+      - app-net
 
   auth-service:
     build: ./services/auth-service
-    ports:
-      - "5001:5000"
+    expose:
+      - "5000"
     env_file:
       - .env
     volumes:
-      - ./services/auth-service:/app
       - ./shared:/shared
+    networks:
+      - app-net
 
   ticket-service:
     build: ./services/ticket-service
-    ports:
-      - "5002:5000"
+    expose:
+      - "5000"
     env_file:
       - .env
     volumes:
-      - ./services/ticket-service:/app
       - ./shared:/shared
-      - C:/Users/ebravo/Desktop/archivos:/app/uploads
+    networks:
+      - app-net
 
   message-service:
     build: ./services/message-service
-    ports:
-      - "5003:5000"
+    expose:
+      - "5000"
     env_file:
       - .env
     volumes:
-      - ./services/message-service:/app
       - ./shared:/shared
-      - C:/Users/ebravo/Desktop/archivos:/app/uploads
+    networks:
+      - app-net
 
   notification-service:
     build: ./services/notification-service
-    ports:
-      - "5004:5000"
+    expose:
+      - "5000"
     env_file:
       - .env
     volumes:
-      - ./services/notification-service:/app
       - ./shared:/shared
+    networks:
+      - app-net
 
   frontend:
     build: ./frontend
     container_name: mda-frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - app-net
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       SA_PASSWORD: ${DB_PASSWORD}
       ACCEPT_EULA: "Y"
-    ports:
-      - "1433:1433"
+    expose:
+      - "1433"
     volumes:
       - sql_data:/var/opt/mssql
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
 
 volumes:
   sql_data:

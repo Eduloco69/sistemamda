@@ -29,7 +29,7 @@ def obtener_mensajes_service(ticket_id,user_id):
                 "Mensaje": "Ticket no encontrado"
             }, 404
 
-        allowed_users = [
+        """allowed_users = [
             ticket.usuarioTicketCreacion,
             ticket.usuarioTicketAsignado,
             ticket.usuarioSolicitudTicket
@@ -38,7 +38,7 @@ def obtener_mensajes_service(ticket_id,user_id):
         if user_id not in allowed_users:
             return {
                 "Mensaje": "No autorizado"
-            }, 403
+            }, 403"""
 
         messages = get_ticket_messages_query(
             cursor,
@@ -60,7 +60,7 @@ def obtener_mensajes_service(ticket_id,user_id):
                 "mine":row.userId == user_id,
                 "archivo":{
                     "archivoId":row.adjuntoId,
-                    "nomArchivo":row.nomArchivo,
+                    "nomArchivo":row.nomOriginal,
                     "extension":row.tipoArchivo
                 }
             })
@@ -114,7 +114,6 @@ def crear_mensaje_service(user_id,data,files):
         ticket = cursor.fetchone()
 
         if not ticket:
-
             return {
                 "Mensaje": "Ticket no existe"
             }, 404
@@ -122,6 +121,8 @@ def crear_mensaje_service(user_id,data,files):
         mensaje_id = insert_message_query(cursor,ticket_id,mensaje,user_id)
 
         attachments = []
+        attachments_response = []
+
 
         if files:   
 
@@ -134,6 +135,15 @@ def crear_mensaje_service(user_id,data,files):
             mensaje_id
         )
 
+        for a in attachments:
+            attachments_response.append(
+                {
+                    'archivoId':a['adjuntoId'],
+                    'nomArchivo':a['nombre'],
+                    'extension':a['extension']
+                    }
+            )
+
         response = {
             "mensajeId": message.mensajeId,
             "ticketId": message.ticketId,
@@ -143,11 +153,7 @@ def crear_mensaje_service(user_id,data,files):
                 "userId": message.userId,
                 "nombre": message.nombreCompleto
             },
-            "archivo":{
-                "archivoId":attachments.adjuntoId,
-                "nomArchivo":attachments.nomArchivo,
-                "extension":attachments.tipoArchivo
-                }
+            "archivos":attachments_response
         }
 
         socketio.emit(
@@ -162,7 +168,6 @@ def crear_mensaje_service(user_id,data,files):
         }
 
     except Exception as e:
-
         conn.rollback()
 
         return {
