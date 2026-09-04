@@ -64,8 +64,8 @@ services:
     environment:
       SA_PASSWORD: ${DB_PASSWORD}
       ACCEPT_EULA: "Y"
-    expose:
-      - "1433"
+    ports:
+      - "1433:1433"
     volumes:
       - sql_data:/var/opt/mssql
     networks:
