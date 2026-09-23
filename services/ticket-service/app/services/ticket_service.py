@@ -140,30 +140,19 @@ def ver_tickets_service(userId, permisos, request):
     
 def crear_tickets_service(user_id, permisos, data, files):
     sql_mail = "SELECT * FROM v_info_ticket_mail WHERE ticket_id = ?"
-    
-    validacion = validate_ticket_data(data)
 
+    validacion = validate_ticket_data(data)
     if not validacion["valido"]:
-        return {
-            "Mensaje":"Datos faltantes",
-            "Error": validacion["errores"]
-        }, 406
+        return {"Mensaje": "Datos faltantes", "Error": validacion["errores"]}, 406
 
     mode = resolve_creation_mode(permisos)
+    payload = build_payload(mode, user_id, data)
 
-    payload = build_payload(
-        mode,
-        user_id,
-        data
-    )
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
-
-        conn = get_connection()
-        cursor = conn.cursor()
-
         resolve_solicitante_for_payload(cursor, mode, payload, data)
-
         ticket_id = insert_ticket(cursor, payload)
         nro_ticket = generate_ticket_number(ticket_id)
         update_ticket_number(cursor, ticket_id, nro_ticket)
@@ -171,12 +160,21 @@ def crear_tickets_service(user_id, permisos, data, files):
         guardar_adjunto(cursor, ticket_id, mensaje_id, user_id, files)
         insert_history(cursor, ticket_id, user_id)
 
-        cursor.commit()
+        cursor.commit()  # ticket ya está persistido a partir de aquí
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return {"Mensaje": "Error creando Ticket", "Error": str(e)}, 400
 
+    # A partir de aquí el ticket YA existe. Un fallo de mail no debe
+    # reportarse como fallo de creación de ticket.
+    response_mail = None
+    try:
         cursor.execute(sql_mail, (ticket_id,))
         row = cursor.fetchone()
         columnas = [col[0] for col in cursor.description]
-        datos = {col: limpiar_para_json(val) for col, val in zip(columnas, row)}    
+        datos = {col: limpiar_para_json(val) for col, val in zip(columnas, row)}
 
         if datos:
             mail = requests.post(
@@ -184,30 +182,25 @@ def crear_tickets_service(user_id, permisos, data, files):
                 json=datos,
                 timeout=10
             )
+            try:
+                mail_response = mail.json()
+            except ValueError:
+                mail_response = None
 
-        try:
-            mail_response = mail.json()
-        except ValueError:
-            mail_response = None
-
-        return {
-            'Mensaje':'Ticket creado correctamente',
-            'ticketId':ticket_id,
-            'NroTicket':nro_ticket,
-            'responseMail':{
-                'statusCode':mail.status_code,
-                'response':mail_response
-            }
-        }, 200
+            response_mail = {"statusCode": mail.status_code, "response": mail_response}
     except Exception as e:
-        conn.rollback()
-        return {
-            'Mensaje':'Error creando Ticket', 
-            'Error':str(e)
-        }, 400
+        # loguear el error, pero no abortar la respuesta de éxito
+        response_mail = {"statusCode": None, "error": str(e)}
     finally:
         cursor.close()
         conn.close()
+
+    return {
+        "Mensaje": "Ticket creado correctamente",
+        "ticketId": ticket_id,
+        "NroTicket": nro_ticket,
+        "responseMail": response_mail
+    }, 200
 
 def ver_detalle_ticket_service(ticket_id, user_id, permisos):
     try:
