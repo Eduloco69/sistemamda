@@ -2,19 +2,17 @@ import os
 from uuid import uuid4
 from ftplib import FTP
 from werkzeug.utils import secure_filename
-
+from io import BytesIO
 
 FTP_HOST = os.getenv('FTP_HOST')
-FTP_PORT = os.getenv('FTP_PORT')
+FTP_PORT = int(os.getenv('FTP_PORT'))
 FTP_USER = os.getenv('FTP_USER')
 FTP_PASSWORD = os.getenv('FTP_PASSWORD')
 FTP_FOLDER = os.getenv('FTP_FOLDER')
 
-
-def save_attachments(cursor, ticket_id, mensaje_id, user_id, files):
+def guardar_adjunto(cursor, ticket_id, mensaje_id, user_id, files):
 
     adjuntos = []
-
     ftp = None
 
     try:
@@ -96,10 +94,22 @@ def save_attachments(cursor, ticket_id, mensaje_id, user_id, files):
 
     except Exception as e:
         raise
-
     finally:
         if ftp:
             try:
                 ftp.quit()
             except Exception:
                 ftp.close()
+
+def obtener_adjunto(adjunto):
+    ftp = FTP()
+    
+    ftp.connect(host=FTP_HOST,port=FTP_PORT)
+    ftp.login(user=FTP_USER,passwd=FTP_PASSWORD)
+    ftp.cwd(FTP_FOLDER)
+    
+    archivo = BytesIO()
+    ftp.retrbinary(f"RETR {adjunto.nomArchivo}",archivo.write)
+    archivo.seek(0)
+
+    return archivo

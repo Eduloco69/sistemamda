@@ -72,16 +72,10 @@ def insert_ticket(cursor,p):
 
 def resolve_solicitante_for_payload(cursor, mode, payload, data):
 
-    print('revisando mode')
-
     if mode == "USUARIO":
         return
 
-    print('mode revisado')
-
     solicitante_info = data.get("solicitanteInfo")
-
-    print(f'info solicitante: {solicitante_info}')
 
     if not solicitante_info:
         raise Exception("Falta informacion del solicitante")
@@ -96,11 +90,7 @@ def resolve_solicitante_for_payload(cursor, mode, payload, data):
                 "solicitanteInfo no contiene un JSON válido"
             )
     
-    print('info Solicitante ok')
-
     resultado = resolve_solicitante(cursor, solicitante_info)
-
-    print(f'resolve solicitante:{resultado}')
 
     payload["usuarioSolicitudTicket"] = resultado["usuarioSolicitudTicket"]
     payload["solicitanteTicket"] = resultado["solicitanteTicket"]
@@ -130,7 +120,6 @@ def insert_history(cursor,ticket_id,user_id):
             usuarioCambio,
             fechaCambio
         )
-
         VALUES
         (
             ?,
@@ -199,17 +188,15 @@ def validate_ticket_data(data):
         errores.append(
             "La subcategoría del ticket es obligatoria"
         )
-
-
     if errores:
-
         return {
             "valido": False,
             "errores": errores
         }
-
-
     return {
         "valido": True,
         "errores": []
     }
+
+def generate_ticket_number(ticket_id):
+    return f"TCK-{ticket_id:06}"

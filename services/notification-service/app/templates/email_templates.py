@@ -4,215 +4,198 @@ def prueba_mail():
         PRUEBA CORREO ENVIADO
     """
 
-def plantilla_ticket_creado(nro_ticket,titulo,categoria,prioridad,solicitante):
-
+def template_ticket_creado(nombre_usuario, nro_ticket, titulo_ticket, categoria, subcategoria, tipo_ticket, fecha_creacion, enlace_ticket):
     return f"""
-    <!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket creado</title>
+</head>
 
-    <html>
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f3f6fa;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1e293b;
+">
 
-    <head>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 40px 20px;">
+    <tr>
+        <td align="center">
 
-        <meta charset="UTF-8">
-
-        <style>
-
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #f4f6f8;
-                margin: 0;
-                padding: 30px;
-            }}
-
-            .container {{
-                max-width: 600px;
-                margin: auto;
-                background-color: white;
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            }}
-
-            .header {{
-                background-color: #2563eb;
-                color: white;
-                padding: 25px;
-            }}
-
-            .header h1 {{
-                margin: 0;
-                font-size: 22px;
-            }}
-
-            .content {{
-                padding: 30px;
-            }}
-
-            .ticket {{
-                background-color: #f8fafc;
-                border-radius: 8px;
-                padding: 20px;
-                margin-top: 20px;
-            }}
-
-            .ticket-row {{
-                margin-bottom: 12px;
-            }}
-
-            .label {{
-                color: #64748b;
-                font-size: 13px;
-            }}
-
-            .value {{
-                font-size: 15px;
-                font-weight: bold;
-                color: #1e293b;
-            }}
-
-            .button {{
-                display: inline-block;
-                margin-top: 20px;
-                padding: 12px 20px;
-                background-color: #2563eb;
-                color: white;
-                text-decoration: none;
-                border-radius: 6px;
-            }}
-
-            .footer {{
-                padding: 20px;
-                background-color: #f8fafc;
-                color: #64748b;
-                font-size: 12px;
-                text-align: center;
-            }}
-
-        </style>
-
-    </head>
-
-
-    <body>
-
-        <div class="container">
-
-            <div class="header">
-
-                <h1>
-                    Mesa de Ayuda
-                </h1>
-
-                <p>
-                    Nuevo ticket creado
-                </p>
-
-            </div>
-
-
-            <div class="content">
-
-                <p>
-                    Hola <strong>{solicitante}</strong>,
-                </p>
-
-                <p>
-                    Se ha creado correctamente un nuevo
-                    ticket en la Mesa de Ayuda.
-                </p>
-
-
-                <div class="ticket">
-
-                    <div class="ticket-row">
-
-                        <div class="label">
-                            Número de ticket
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style=" max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0;">
+                <tr>
+                    <td style="background-color: #1e40af;padding: 28px 35px;">
+                        <div style="color: #ffffff;font-size: 22px;font-weight: bold;">
+                            Mesa de Ayuda
                         </div>
 
-                        <div class="value">
-                            {nro_ticket}
+                        <div style="color: #dbeafe;font-size: 14px;margin-top: 6px;">
+                            Sistema de Gestión de Tickets
                         </div>
+                    </td>
+                </tr>
 
-                    </div>
+                <tr>
+                    <td style="padding: 35px;">
 
+                        <h1 style="margin: 0 0 20px 0;font-size: 24px;color: #1e3a8a;">
+                            Ticket creado correctamente
+                        </h1>
 
-                    <div class="ticket-row">
+                        <p style="font-size: 15px;line-height: 1.6;margin: 0 0 15px 0;">
+                            Estimado/a <strong>{nombre_usuario}</strong>,
+                        </p>
 
-                        <div class="label">
-                            Título
+                        <p style="font-size: 15px;line-height: 1.6;margin: 0 0 25px 0;color: #475569;">
+                            Su solicitud ha sido registrada exitosamente
+                            en la <strong>Mesa de Ayuda</strong>.
+                            A continuación encontrará el detalle
+                            de su ticket.
+                        </p>
+
+                        <table
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            style="
+                                background-color: #eff6ff;
+                                border: 1px solid #bfdbfe;
+                                border-radius: 8px;
+                                margin-bottom: 25px;
+                            "
+                        >
+                            <tr>
+                                <td style="padding: 20px;">
+
+                                    <div style="font-size: 13px;color: #64748b;margin-bottom: 5px;">
+                                        N° de Ticket
+                                    </div>
+
+                                    <div style="font-size: 18px;font-weight: bold;letter-spacing: 1px;color: #1e3a8a;margin-bottom: 18px;">
+                                        #{nro_ticket}
+                                    </div>
+
+                                    <div style="font-size: 13px;color: #64748b;margin-bottom: 5px;">
+                                        Título
+                                    </div>
+
+                                    <div style="font-size: 15px;font-weight: bold;color: #1e3a8a;margin-bottom: 18px;">
+                                        {titulo_ticket}
+                                    </div>
+
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td width="50%" style="vertical-align: top;padding-bottom: 18px;">
+                                                <div style="font-size: 13px;color: #64748b;margin-bottom: 5px;">
+                                                    Categoría
+                                                </div>
+                                                <div style="font-size: 14px;font-weight: bold;color: #1e3a8a;">
+                                                    {categoria}
+                                                </div>
+                                            </td>
+                                            <td width="50%" style="vertical-align: top;padding-bottom: 18px;">
+                                                <div style="font-size: 13px;color: #64748b;margin-bottom: 5px;">
+                                                    Subcategoría
+                                                </div>
+                                                <div style="font-size: 14px;font-weight: bold;color: #1e3a8a;">
+                                                    {subcategoria}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td width="50%" style="vertical-align: top;">
+                                                <div style="font-size: 13px;color: #64748b;margin-bottom: 5px;">
+                                                    Tipo de Ticket
+                                                </div>
+                                                <div style="font-size: 14px;font-weight: bold;color: #1e3a8a;">
+                                                    {tipo_ticket}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 25px;">
+                            <tr>
+                                <td style="border-left: 4px solid #2563eb;padding: 12px 15px;background-color: #f8fafc;color: #475569;font-size: 13px;line-height: 1.5;">
+                                    Ticket creado el <strong>{fecha_creacion}</strong>.
+                                    Podrá revisar el estado y avance de su
+                                    solicitud ingresando al sistema.
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td align="center">
+
+                                    
+                                        <href="{enlace_ticket}"
+                                        style="
+                                            display: inline-block;
+                                            background-color: #2563eb;
+                                            color: #ffffff;
+                                            text-decoration: none;
+                                            font-size: 15px;
+                                            font-weight: bold;
+                                            padding: 13px 30px;
+                                            border-radius: 6px;
+                                        ">
+                                        Ver ticket
+                                    </a>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style=" margin: 28px 0 0 0; font-size: 13px; line-height: 1.5; color: #64748b; text-align: center; ">
+                            Si el botón no funciona, puede ingresar
+                            directamente al sistema utilizando el siguiente
+                            enlace:
+                            <br>
+
+                            
+                                <href="{enlace_ticket}"
+                                style="
+                                    color: #2563eb;
+                                    text-decoration: none;
+                                "
+                            >
+                                {enlace_ticket}
+                            </a>
+                        </p>
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style=" background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 35px; text-align: center; ">
+                        <div style=" font-size: 12px; color: #64748b; line-height: 1.5; ">
+                            Este correo ha sido generado automáticamente
+                            por la Mesa de Ayuda.
+                            <br>
+                            Por favor, no responda directamente a este mensaje.
                         </div>
+                    </td>
+                </tr>
 
-                        <div class="value">
-                            {titulo}
-                        </div>
+            </table>
 
-                    </div>
+        </td>
+    </tr>
+</table>
 
-
-                    <div class="ticket-row">
-
-                        <div class="label">
-                            Categoría
-                        </div>
-
-                        <div class="value">
-                            {categoria}
-                        </div>
-
-                    </div>
-
-
-                    <div class="ticket-row">
-
-                        <div class="label">
-                            Prioridad
-                        </div>
-
-                        <div class="value">
-                            {prioridad}
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <p>
-                    Puedes ingresar a la Mesa de Ayuda
-                    para revisar el estado y seguimiento
-                    de tu solicitud.
-                </p>
-
-
-                <a
-                    href="http://localhost:5173"
-                    class="button"
-                >
-                    Ver ticket
-                </a>
-
-            </div>
-
-
-            <div class="footer">
-
-                Este correo fue generado automáticamente
-                por la Mesa de Ayuda.
-
-                <br>
-
-                Por favor, no respondas directamente
-                a este mensaje.
-
-            </div>
-
-        </div>
-
-    </body>
-
-    </html>
-    """
+</body>
+</html>
+"""
 
 def template_register(nombre_usuario, correo, password, enlace_login):
     return f"""

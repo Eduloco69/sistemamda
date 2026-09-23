@@ -105,7 +105,7 @@ CREATE OR ALTER VIEW v_tickets_por_estado as (
 	    ON a.estadoTicketId = b.estadoTicket
       GROUP BY  estadoTicketId,
                 a.estadoTicket
-)
+);
 
 CREATE OR ALTER VIEW v_tickets_hoy as (
     SELECT count(*) as 'TicketsHoy' 
@@ -151,3 +151,29 @@ LEFT JOIN [MesaDeAyuda].[dbo].[ticket] c
 	ON (b.subCatId = c.subcategoriaTicket)
 GROUP BY	a.categoriaId,		
 			a.categoria;
+
+CREATE OR ALTER VIEW v_info_ticket_mail AS (
+    SELECT t.ticketId as 'ticket_id',
+           CASE 
+            WHEN t.usuarioSolicitudTicket is not null THEN u.userNom + ' ' + u.userApPat
+            ELSE s.nombre
+           END as 'nombre_usuario',
+           COALESCE(u.userMail, s.correo) as 'correo',
+           t.NroTicket as 'nro_ticket',
+           t.tituloTicket as 'titulo_ticket',
+           c.categoria as 'categoria',
+           sc.subCat as 'subcategoria',
+           tt.tipoTicket as 'tipo_ticket',
+           t.fechaCreacionTicket as 'fecha_creacion'
+      FROM [MesaDeAyuda].[dbo].[ticket] t
+      LEFT JOIN [MesaDeAyuda].[dbo].[usuario] u
+        ON (t.usuarioSolicitudTicket = u.userId)
+      LEFT JOIN [MesaDeAyuda].[dbo].[solicitante] s
+        ON (t.solicitanteTicket = s.solicitanteId)
+      LEFT JOIN subCategoriaTicket sc
+        ON (t.subcategoriaTicket = sc.subCatId)
+      LEFT JOIN categoria c
+        ON (sc.categoriaId = c.categoriaId)
+      LEFT JOIN tipoTicket tt
+        ON (t.tipoTicket = tt.tipoTicketId)
+);

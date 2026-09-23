@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 
 
 FTP_HOST = os.getenv('FTP_HOST')
-FTP_PORT = os.getenv('FTP_PORT')
+FTP_PORT = int(os.getenv('FTP_PORT'))
 FTP_USER = os.getenv('FTP_USER')
 FTP_PASSWORD = os.getenv('FTP_PASSWORD')
 FTP_FOLDER = os.getenv('FTP_FOLDER')
@@ -14,7 +14,6 @@ FTP_FOLDER = os.getenv('FTP_FOLDER')
 def save_attachments(cursor, ticket_id, mensaje_id, user_id, files):
 
     adjuntos = []
-
     ftp = None
 
     try:
@@ -33,7 +32,6 @@ def save_attachments(cursor, ticket_id, mensaje_id, user_id, files):
         ftp.cwd(FTP_FOLDER)
 
         for file in files:
-
             if not file or file.filename == "":
                 continue
 

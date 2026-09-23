@@ -4,12 +4,6 @@ INSERT INTO [MesaDeAyuda].[dbo].[rol] VALUES (2, 'Supervisor' )
 INSERT INTO [MesaDeAyuda].[dbo].[rol] VALUES (3, 'Tecnico' )
 INSERT INTO [MesaDeAyuda].[dbo].[rol] VALUES (4, 'Usuario' )
 
-/*Tipos de ticket iniciales*/
-INSERT INTO [MesaDeAyuda].[dbo].[tipoTicket] VALUES (1, 'Incidencia' )
-INSERT INTO [MesaDeAyuda].[dbo].[tipoTicket] VALUES (2, 'Solicitud de Servicio' )
-INSERT INTO [MesaDeAyuda].[dbo].[tipoTicket] VALUES (3, 'Problemas' )
-INSERT INTO [MesaDeAyuda].[dbo].[tipoTicket] VALUES (4, 'Solicitud de cambio' )
-
 /*Estado de Tickets*/
 INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (1, 'Abierto')
 INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (2, 'En proceso')
@@ -80,8 +74,6 @@ SET IDENTITY_INSERT [subCategoriaTicket] OFF;
 SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[departamento] ON;
 
 INSERT INTO [MesaDeAyuda].[dbo].[departamento] (departamentoId, nombre, tipoDepartamento) VALUES (1, 'Administrador', 'tecnico')
-INSERT INTO [MesaDeAyuda].[dbo].[departamento] (departamentoId, nombre, tipoDepartamento) VALUES (2, 'Contabilidad', 'usuario')
-INSERT INTO [MesaDeAyuda].[dbo].[departamento] (departamentoId, nombre, tipoDepartamento) VALUES (3, 'Ventas', 'usuario')
 
 SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[departamento] OFF;
 
@@ -110,22 +102,60 @@ INSERT INTO [MesaDeAyuda].[dbo].[permisos] VALUES (21, 'GESTIONAR_PARAMETROS', '
 INSERT INTO [MesaDeAyuda].[dbo].[permisos] VALUES (22, 'MODIFICAR_PARAMETROS', 'Modificar parametros')
 
 /*Permisos a Administrador*/
-INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso]
-(
-    [rolId],
-    [permisoId]
-)
-SELECT
-    1,
-    p.permisoId
-FROM [MesaDeAyuda].[dbo].[permisos] p
-WHERE NOT EXISTS
-(
-    SELECT 1
-    FROM [MesaDeAyuda].[dbo].[rolPermiso] rp
-    WHERE rp.rolId = 1
-    AND rp.permisoId = p.permisoId
-);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 1);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 2);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 3);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 4);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 5);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 6);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 7);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 8);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 9);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 10);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 11);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 12);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 13);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 14);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 15);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 16);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 17);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 18);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 19);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 20);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 21);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (1, 22);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 1);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 2);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 3);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 4);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 5);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 6);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 7);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 8);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 11);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 13);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 14);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 16);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 17);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 18);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 19);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 20);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 21);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (2, 22);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 1);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 2);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 4);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 6);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 7);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 8);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 10);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 12);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 14);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (3, 15);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (4, 1);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (4, 6);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (4, 7);
+INSERT INTO [MesaDeAyuda].[dbo].[rolPermiso] ([rolId], [permisoId]) VALUES (4, 9);
 
 /*Prioridad Ticket*/
 SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[prioridadTicket] ON;

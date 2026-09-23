@@ -17,3 +17,9 @@ def cambio_contraseña_controller():
     r, s = mail_cambio_contraseña_service(data)
 
     return jsonify(r), s
+
+def creacion_ticket_controller():
+    data = request.json
+    r, s = mail_creacion_ticket_service(data)
+
+    return jsonify(r), s

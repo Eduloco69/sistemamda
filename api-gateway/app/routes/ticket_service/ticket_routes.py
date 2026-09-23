@@ -30,6 +30,14 @@ def tecnicos():
 def tipo_tickets():
     return proxy_request(f"{TICKET_SERVICE}/ticket/tipoticket")
 
+@ticket_bp.route("/tipoticket", methods=['POST'])
+def crear_tipo_ticket():
+    return proxy_request(f"{TICKET_SERVICE}/ticket/tipoticket")
+
+@ticket_bp.route("/tipoticket/<int:id>", methods=['PUT'])
+def editar_tipo_ticket(id):
+    return proxy_request(f"{TICKET_SERVICE}/ticket/tipoticket/{id}")
+
 @ticket_bp.route("/solicitante", methods=['GET'])
 def solicitante():
     return proxy_request(f"{TICKET_SERVICE}/ticket/solicitante")
@@ -37,3 +45,15 @@ def solicitante():
 @ticket_bp.route("/archivo/<int:adjunto_id>", methods=['GET'])
 def obtener_archivo(adjunto_id):
     return proxy_request(f"{TICKET_SERVICE}/ticket/archivo/{adjunto_id}")
+
+@ticket_bp.route("/asignar/<int:ticket_id>", methods=['POST'])
+def asignar_ticket(ticket_id):
+    return proxy_request(f"{TICKET_SERVICE}/ticket/asignar/{ticket_id}")
+
+@ticket_bp.route("/estados/<int:ticket_id>", methods=['GET'])
+def estados_ticket(ticket_id):
+    return proxy_request(f"{TICKET_SERVICE}/ticket/estados/{ticket_id}")
+
+@ticket_bp.route("/gestionar/<int:ticket_id>", methods=['POST'])
+def gestionar_ticket(ticket_id):
+    return proxy_request(f"{TICKET_SERVICE}/ticket/gestionar/{ticket_id}")

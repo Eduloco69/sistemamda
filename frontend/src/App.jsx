@@ -16,9 +16,9 @@ import Categorias from "./pages/categorias"
 import Empresas from "./pages/Empresas"
 import CambiarContraseña from "./pages/cambiarContraseña"
 import RecuperarContraseña from "./pages/RecuperarContraseña"
+import TiposTicket from "./pages/TiposTicket"
 
 import useAuth from "./hooks/useAuth"
-
 
 export default function App() {
 
@@ -159,7 +159,14 @@ export default function App() {
           }
         />
 
-      </Route>
+        <Route
+          path="/configuracion/tipos-ticket"
+          element={
+            <TiposTicket />
+          }
+        />
+
+      </Route>z
 
       <Route
         path="/login"

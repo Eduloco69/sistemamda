@@ -1,5 +1,11 @@
 # Backend Mesa de Ayuda
 
+## Proyecto desarrollado por 
+
+```bat
+Eduardo Bravo Diaz
+```
+
 ## Antes de ejecutar
 
 Tener instalado los siguientes programas
@@ -15,23 +21,10 @@ cp .env.example .env
 
 Entra al archivo ``.env`` y modifica la variable ``DB_PASSWORD`` para cambiar la contraseña de la BD
 
-## Para ejecutar
-
-En la terminal usa el comando 
+## Ejecutar aplicación modo Dev
 
 ```bat
-docker compose up --build
-```
-Y automaticamente se levantarán todos los servicios.
-
-## Ejecutar cada servicio por separado
-
-Base de datos
-```bat
-docker compose up db --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
 ```
 
-Auth-service
-```bat
-docker compose up auth-service --build
-```
+## Ejecutar aplicación modo Prod

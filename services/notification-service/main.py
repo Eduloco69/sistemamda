@@ -1,7 +1,7 @@
 from flask import Flask
 from dotenv import load_dotenv
 
-from app.routes.notification_routes import mail_bp
+from app.routes.mail_routes import mail_bp
 
 load_dotenv()
 

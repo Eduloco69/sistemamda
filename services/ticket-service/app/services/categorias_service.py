@@ -58,7 +58,7 @@ def crear_categoria_service(data):
             'Error':str(e)
         }, 400
     finally:
-        cursor.commit()
+        conn.commit()
         cursor.close()
         conn.close()
 

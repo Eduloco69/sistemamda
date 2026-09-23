@@ -95,3 +95,23 @@ def mail_cambio_contraseña_service(data):
     r, s = enviar_correo(correo, asunto, contenido)
 
     return r, s
+
+def mail_creacion_ticket_service(data):
+    nombre_usuario = data['nombre_usuario']
+    correo = data['correo']
+    nro_ticket = data['nro_ticket']
+    titulo_ticket = data['titulo_ticket']
+    categoria = data['categoria']
+    subcategoria = data['subcategoria']
+    tipo_ticket = data['tipo_ticket']
+    fecha_creacion = data['fecha_creacion']
+
+    enlace_ticket = f"{FRONTEND_URL}/tickets/{data['ticket_id']}"
+
+    asunto = f"Se ha creado el Ticket {nro_ticket}"
+    contenido = template_ticket_creado(nombre_usuario, nro_ticket, titulo_ticket, categoria, subcategoria, tipo_ticket, fecha_creacion, enlace_ticket)
+
+    r, s = enviar_correo(correo, asunto, contenido)
+
+    return r, s
+    

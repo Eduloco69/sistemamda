@@ -51,7 +51,7 @@ CREATE TABLE [prioridadTicket] (
 GO
 
 CREATE TABLE [tipoTicket] (
-  [tipoTicketId] int PRIMARY KEY,
+  [tipoTicketId] int IDENTITY(1,1) PRIMARY KEY,
   [tipoTicket] varchar(50),
   [color] varchar(7),
   [activo] bit NOT NULL DEFAULT (1),
@@ -177,7 +177,7 @@ CREATE TABLE [empresas] (
   [empresaId] int PRIMARY KEY IDENTITY(1, 1),
   [nomEmpresa] nvarchar(255),
   [color] varchar(7),
-  [activo] bit NOT NULL DEFAULT (0)
+  [activo] bit NOT NULL DEFAULT (1)
 )
 GO
 
@@ -278,3 +278,5 @@ GO
 
 ALTER TABLE [derivacionTicket] ADD FOREIGN KEY ([empresaId]) REFERENCES [empresas] ([empresaId])
 GO
+
+ALTER DATABASE SCOPED CONFIGURATION SET IDENTITY_CACHE = OFF
