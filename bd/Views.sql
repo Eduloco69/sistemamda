@@ -129,7 +129,7 @@ tickets_por_dia AS (
     SELECT
         CAST(fechaCreacionTicket AS DATE) AS fecha,
         COUNT(*) AS cantidad
-    FROM ticket
+    FROM [MesaDeAyuda].[dbo].[ticket]
     WHERE fechaCreacionTicket >= DATEADD(DAY, -30, GETDATE())
     GROUP BY CAST(fechaCreacionTicket AS DATE)
 )
@@ -170,10 +170,10 @@ CREATE OR ALTER VIEW v_info_ticket_mail AS (
         ON (t.usuarioSolicitudTicket = u.userId)
       LEFT JOIN [MesaDeAyuda].[dbo].[solicitante] s
         ON (t.solicitanteTicket = s.solicitanteId)
-      LEFT JOIN subCategoriaTicket sc
+      LEFT JOIN [MesaDeAyuda].[dbo].subCategoriaTicket sc
         ON (t.subcategoriaTicket = sc.subCatId)
-      LEFT JOIN categoria c
+      LEFT JOIN [MesaDeAyuda].[dbo].categoria c
         ON (sc.categoriaId = c.categoriaId)
-      LEFT JOIN tipoTicket tt
+      LEFT JOIN [MesaDeAyuda].[dbo].tipoTicket tt
         ON (t.tipoTicket = tt.tipoTicketId)
 );

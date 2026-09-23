@@ -6,12 +6,13 @@ INSERT INTO [MesaDeAyuda].[dbo].[rol] VALUES (4, 'Usuario' )
 
 /*Estado de Tickets*/
 INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (1, 'Abierto')
-INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (2, 'En proceso')
-INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (3, 'Pendiente')
-INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (4, 'Resuelto')
-INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (5, 'Cerrado')
-INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (6, 'Reabierto')
-INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (7, 'Cancelado')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (2, 'Anulado')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (3, 'Asignado')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (4, 'En Gestión')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (5, 'Derivado')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (6, 'Resuelto')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (7, 'Reabierto')
+INSERT INTO [MesaDeAyuda].[dbo].[estadoTicket] VALUES (8, 'Cerrado')
 
 /*Categor�as Iniciales*/
 SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[categoria] ON;
@@ -28,20 +29,20 @@ SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[categoria] OFF;
 /*Subcategorias iniciales*/
 SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[subCategoriaTicket] ON;
 
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (1, 'Ordenadores de sobremesa y port�tiles', 1)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (2, 'Impresoras y esc�neres', 1)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (3, 'Dispositivos m�viles', 1)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (1, 'Ordenadores de sobremesa y portátiles', 1)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (2, 'Impresoras y escáneres', 1)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (3, 'Dispositivos móviles', 1)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (4, 'Servidores', 1)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (5, 'Equipos de Red', 1)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (6, 'Perif�ricos', 1)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (6, 'Periféricos', 1)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (7, 'Dispositivos de almacenamiento', 1)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (8, 'Equipos de videoconferencia', 1)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (9, 'Problemas de energ�a', 1)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (9, 'Problemas de energía', 1)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (10, 'Docking stations', 1)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (11, 'Aplicaciones de S.O.', 2)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (12, 'Correo Electr�nico', 2)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (12, 'Correo Electrónico', 2)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (13, 'Base de datos', 2)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (14, 'Instalaci�n / actualizaci�n de software', 2)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (14, 'Instalación / actualización de software', 2)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (15, 'Licenciamiento', 2)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (16, 'Errores de sistema operativo', 2)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (17, 'Aplicaciones corporativas internas', 2)
@@ -50,25 +51,25 @@ INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categori
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (20, 'Rendimiento lento de Internet/Red', 3)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (21, 'Acceso Wifi', 3)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (22, 'Problemas de LAN cableada', 3)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (23, 'Ca�das de red general', 3)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (23, 'Caídas de red general', 3)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (24, 'Problemas con proxy/firewall', 3)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (25, 'Virus y Malware', 4)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (26, 'Acceso no autorizado', 4)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (27, 'Intentos de Phishing', 4)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (28, 'Gesti�n de antivirus/EDR', 4)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (29, 'Restablecimiento de contrase�as', 5)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (28, 'Gestión de antivirus/EDR', 4)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (29, 'Restablecimiento de contraseñas', 5)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (30, 'Bloqueo de cuentas', 5)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (31, 'Problemas de permiso', 5)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (32, 'Baja de usuarios', 5)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (33, 'Modificaci�n de accesos/roles', 5)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (33, 'Modificación de accesos/roles', 5)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (34, 'Acceso remoto', 6)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (35, 'Interrupci�n del servicio de correo electr�nico', 6)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (36, 'Fallos en la copia de seguridad y recuperaci�n', 6)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (35, 'Interrupción del servicio de correo electrónico', 6)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (36, 'Fallos en la copia de seguridad y recuperación', 6)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (37, 'Configuracion de usuarios', 6)
 INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (38, 'Solicitud de nuevos servicios TI', 6)
-INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (39, 'Gesti�n de respaldos (restore)', 6)
+INSERT INTO [MesaDeAyuda].[dbo].[subCategoriaTicket] (subCatId, subCat, categoriaId) VALUES (39, 'Gestión de respaldos (restore)', 6)
 
-SET IDENTITY_INSERT [subCategoriaTicket] OFF;
+SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[subCategoriaTicket] OFF;
 
 /*Departamento inicial*/
 SET IDENTITY_INSERT [MesaDeAyuda].[dbo].[departamento] ON;

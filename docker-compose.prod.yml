@@ -1,3 +1,4 @@
-frontend:
-  ports:
-    - "80:5173"
+services:
+  frontend:
+    ports:
+      - "80:5173"
