@@ -144,23 +144,36 @@ def crear_tickets_service(user_id, permisos, data, files):
     validacion = validate_ticket_data(data)
     if not validacion["valido"]:
         return {"Mensaje": "Datos faltantes", "Error": validacion["errores"]}, 406
+    print('Validación Ok')
 
     mode = resolve_creation_mode(permisos)
+    print('Mode ok')
     payload = build_payload(mode, user_id, data)
+    print('Payload Ok')
 
     conn = get_connection()
+    print('Conn ok')
     cursor = conn.cursor()
+    print('Cursor Ok')
 
     try:
         resolve_solicitante_for_payload(cursor, mode, payload, data)
+        print('resolve_solicitante_for_payload Ok')
         ticket_id = insert_ticket(cursor, payload)
+        print('ticket_id Ok')
         nro_ticket = generate_ticket_number(ticket_id)
+        print('nro_ticket Ok')
         update_ticket_number(cursor, ticket_id, nro_ticket)
+        print('update_ticket_number Ok')
         mensaje_id = insert_initial_message(cursor, ticket_id, payload["ticketDesc"], user_id)
+        print('mensaje_id Ok')
         guardar_adjunto(cursor, ticket_id, mensaje_id, user_id, files)
+        print('guardar_adjunto Ok')
         insert_history(cursor, ticket_id, user_id)
+        print('insert_history Ok')
 
         cursor.commit()
+        print("cursor ok")
     except Exception as e:
         conn.rollback()
         cursor.close()
