@@ -6,3 +6,4 @@
 services/ticket-service/uploads
 frontend/.env
 docker-compose.override.yml
+services/*/app/services/app.log

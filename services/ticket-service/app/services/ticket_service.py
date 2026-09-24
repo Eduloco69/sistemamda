@@ -9,6 +9,15 @@ from app.utils.limpiar_json import limpiar_para_json
 import math
 import requests
 import json
+import logging
+
+logging.basicConfig(
+    filename='app.log',
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+
 
 MAIL_SERVICE = f"{os.getenv('NOTIFICATION_SERVICE')}/mail"
 
@@ -144,36 +153,36 @@ def crear_tickets_service(user_id, permisos, data, files):
     validacion = validate_ticket_data(data)
     if not validacion["valido"]:
         return {"Mensaje": "Datos faltantes", "Error": validacion["errores"]}, 406
-    print('Validación Ok')
+    logging.info('Validación Ok')
 
     mode = resolve_creation_mode(permisos)
-    print('Mode ok')
+    logging.info('Mode ok')
     payload = build_payload(mode, user_id, data)
-    print('Payload Ok')
+    logging.info('Payload Ok')
 
     conn = get_connection()
-    print('Conn ok')
+    logging.info('Conn ok')
     cursor = conn.cursor()
-    print('Cursor Ok')
+    logging.info('Cursor Ok')
 
     try:
         resolve_solicitante_for_payload(cursor, mode, payload, data)
-        print('resolve_solicitante_for_payload Ok')
+        logging.info('resolve_solicitante_for_payload Ok')
         ticket_id = insert_ticket(cursor, payload)
-        print('ticket_id Ok')
+        logging.info('ticket_id Ok')
         nro_ticket = generate_ticket_number(ticket_id)
-        print('nro_ticket Ok')
+        logging.info('nro_ticket Ok')
         update_ticket_number(cursor, ticket_id, nro_ticket)
         print('update_ticket_number Ok')
         mensaje_id = insert_initial_message(cursor, ticket_id, payload["ticketDesc"], user_id)
-        print('mensaje_id Ok')
+        logging.info('mensaje_id Ok')
         guardar_adjunto(cursor, ticket_id, mensaje_id, user_id, files)
-        print('guardar_adjunto Ok')
+        logging.info('guardar_adjunto Ok')
         insert_history(cursor, ticket_id, user_id)
-        print('insert_history Ok')
+        logging.info('insert_history Ok')
 
         cursor.commit()
-        print("cursor ok")
+        logging.info("cursor ok")
     except Exception as e:
         conn.rollback()
         cursor.close()
