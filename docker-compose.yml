@@ -28,6 +28,7 @@ services:
       - .env
     volumes:
       - ./shared:/shared
+      - ./logs/ticket-service:/app/logs
     networks:
       - app-net
 
