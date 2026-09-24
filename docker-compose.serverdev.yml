@@ -11,6 +11,8 @@ services:
 
   ticket-service:
     command: flask --app main:app run --host=0.0.0.0 --port=5000 --debug
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   message-service:
     command: flask --app main:app run --host=0.0.0.0 --port=5000 --debug
