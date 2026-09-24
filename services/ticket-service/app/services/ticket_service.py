@@ -10,14 +10,20 @@ import math
 import requests
 import json
 import logging
+import os
+
+os.makedirs("/app/logs", exist_ok=True)
 
 logging.basicConfig(
-    filename='app.log',
+    filename="/app/logs/app.log",
     level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True
 )
 
-
+logging.info("====================================")
+logging.info("Aplicación iniciada correctamente")
+logging.info("====================================")
 
 MAIL_SERVICE = f"{os.getenv('NOTIFICATION_SERVICE')}/mail"
 
@@ -181,7 +187,7 @@ def crear_tickets_service(user_id, permisos, data, files):
         insert_history(cursor, ticket_id, user_id)
         logging.info('insert_history Ok')
 
-        cursor.commit()
+        conn.commit()
         logging.info("cursor ok")
     except Exception as e:
         conn.rollback()
