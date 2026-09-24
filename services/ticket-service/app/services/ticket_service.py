@@ -160,15 +160,13 @@ def crear_tickets_service(user_id, permisos, data, files):
         guardar_adjunto(cursor, ticket_id, mensaje_id, user_id, files)
         insert_history(cursor, ticket_id, user_id)
 
-        cursor.commit()  # ticket ya está persistido a partir de aquí
+        cursor.commit()
     except Exception as e:
         conn.rollback()
         cursor.close()
         conn.close()
         return {"Mensaje": "Error creando Ticket", "Error": str(e)}, 400
 
-    # A partir de aquí el ticket YA existe. Un fallo de mail no debe
-    # reportarse como fallo de creación de ticket.
     response_mail = None
     try:
         cursor.execute(sql_mail, (ticket_id,))
