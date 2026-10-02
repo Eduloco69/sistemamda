@@ -21,10 +21,6 @@ logging.basicConfig(
     force=True
 )
 
-logging.info("====================================")
-logging.info("Aplicación iniciada correctamente")
-logging.info("====================================")
-
 MAIL_SERVICE = f"{os.getenv('NOTIFICATION_SERVICE')}/mail"
 
 ESTADOS_ID_A_NOMBRE = {
@@ -159,17 +155,12 @@ def crear_tickets_service(user_id, permisos, data, files):
     validacion = validate_ticket_data(data)
     if not validacion["valido"]:
         return {"Mensaje": "Datos faltantes", "Error": validacion["errores"]}, 406
-    logging.info('Validación Ok')
 
     mode = resolve_creation_mode(permisos)
-    logging.info('Mode ok')
     payload = build_payload(mode, user_id, data)
-    logging.info('Payload Ok')
 
     conn = get_connection()
-    logging.info('Conn ok')
     cursor = conn.cursor()
-    logging.info('Cursor Ok')
 
     try:
         resolve_solicitante_for_payload(cursor, mode, payload, data)
@@ -235,6 +226,23 @@ def ver_detalle_ticket_service(ticket_id, user_id, permisos):
 
         sql = "SELECT * FROM [MesaDeAyuda].[dbo].[v_detalle_tickets] where ticketId = ?"
 
+        sql_derivacion = """SELECT  [derivacionId]
+                                    ,[ticketId]
+                                    ,e.[empresaId]
+                                    ,e.nomEmpresa
+                                    ,e.color
+                                    ,[nroTicket]
+                                    ,[fechaDerivacion]
+                                    ,[comentario]
+                                    ,[fechaFinalización]
+                                    ,[derivacionFinalizada]
+                                FROM [MesaDeAyuda].[dbo].[derivacionTicket] dt
+                                LEFT JOIN [MesaDeAyuda].[dbo].[empresas] e 
+                                    ON (dt.empresaId = e.empresaId)
+                                WHERE ticketId = ?"""
+
+        derivaciones = []
+
         cursor.execute(sql, ticket_id)
 
         data = cursor.fetchone()
@@ -254,12 +262,20 @@ def ver_detalle_ticket_service(ticket_id, user_id, permisos):
         columns = [col[0] for col in cursor.description]
         ticket = dict(zip(columns, data))
 
+        cursor.execute(sql_derivacion, ticket_id)
+        data = cursor.fetchall()
+
+        for d in data:
+            columns = [col[0] for col in cursor.description]
+            derivaciones.append(dict(zip(columns, d)))
+
         estados, s = estados_ticket_service(ticket_id, user_id, permisos)
 
         return {
             'Mensaje':'Ticket obtenido correctamente',
             'Ticket':ticket,
-            'estados':estados
+            'estados':estados,
+            'derivaciones':derivaciones
         }, 200
     except Exception as e:
         return {

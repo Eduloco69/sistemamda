@@ -3,7 +3,7 @@ services:
   gateway:
     build: ./api-gateway
     ports:
-      - "5000:8000"
+      - "5010:8000"
     env_file:
       - .env
     networks:
@@ -57,18 +57,6 @@ services:
   frontend:
     build: ./frontend
     container_name: mda-frontend
-    networks:
-      - app-net
-
-  db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      SA_PASSWORD: ${DB_PASSWORD}
-      ACCEPT_EULA: "Y"
-    ports:
-      - "1433:1433"
-    volumes:
-      - sql_data:/var/opt/mssql
     networks:
       - app-net
 

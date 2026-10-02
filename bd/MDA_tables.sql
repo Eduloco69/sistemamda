@@ -187,6 +187,8 @@ CREATE TABLE [derivacionTicket] (
   [empresaId] int,
   [nroTicket] varchar(15),
   [fechaDerivacion] datetime,
+  [comentario] varchar(300),
+  [fechaFinalización] datetime,
   [derivacionFinalizada] bit NOT NULL DEFAULT (0)
 )
 GO
