@@ -82,7 +82,26 @@ def gestionar_ticket_controller(ticket_id):
     data = request.form.to_dict()
     user_id = user.get("userId")
     permisos = user.get("permisos", [])
-    files = request.files.getlist("files")
+    files = request.files.getlist("Files")
     r, s = gestionar_ticket_service(ticket_id, data, user_id, permisos, files)
 
+    return jsonify(r), s
+
+def modificar_derivacion_controller(derivacion_id):
+    user = request.user
+    data = request.json
+
+    user_id = user.get("userId")
+    permisos = user.get("permisos", [])
+
+    r, s = modificar_derivacion_service(derivacion_id, user_id, permisos, data)
+    return jsonify(r), s
+
+def finalizar_derivacion_controller(derivacion_id):
+    user = request.user
+    
+    user_id = user.get("userId")
+    permisos = user.get("permisos", [])
+
+    r, s = finalizar_derivacion_service(derivacion_id, user_id, permisos)
     return jsonify(r), s

@@ -10,6 +10,7 @@ from app.routes.ticket_service.ticket_routes import ticket_bp
 from app.routes.ticket_service.empresa_routes import empresa_bp
 from app.routes.message_service.message_routes import message_bp
 from app.routes.ticket_service.categoria_routes import categoria_bp
+from app.routes.ticket_service.departamento_routes import departamento_bp
 
 FRONTEND_URL = os.getenv('FRONTEND_URL')
 
@@ -21,6 +22,7 @@ app.register_blueprint(ticket_bp,url_prefix="/ticket")
 app.register_blueprint(empresa_bp,url_prefix="/empresa")
 app.register_blueprint(message_bp,url_prefix="/message")
 app.register_blueprint(categoria_bp,url_prefix="/categoria")
+app.register_blueprint(departamento_bp, url_prefix="/departamento")
 
 init_message_socket()
 

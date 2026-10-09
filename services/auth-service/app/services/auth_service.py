@@ -1,384 +1,401 @@
+import logging
 import os
-import requests
-import datetime
+import re
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+
 import bcrypt
+import pyodbc
+import requests
+
 from app.database.connection import get_connection
-from shared.app.auth.jwt_handler import generate_token
-from app.utils.password_val import password_check
 from app.utils.password_gen import password_generator
-from app.utils.token_change_pass import *
+from app.utils.password_val import password_check
+from app.utils.token_change_pass import gen_token, hash_token
+from shared.app.auth.jwt_handler import generate_token
 
-MAIL_SERVICE = f"{os.getenv('NOTIFICATION_SERVICE')}/mail"
+logger = logging.getLogger(__name__)
 
-def register_user(data):
+MAIL_SERVICE = f"{os.environ['NOTIFICATION_SERVICE']}/mail"
+
+T_USUARIO = "[MesaDeAyuda].[dbo].[usuario]"
+T_TOKEN = "[MesaDeAyuda].[dbo].[TokenChangePass]"
+T_ROL_PERMISO = "[MesaDeAyuda].[dbo].[rolPermiso]"
+T_PERMISOS = "[MesaDeAyuda].[dbo].[permisos]"
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MAX_PASSWORD_ATTEMPTS = 20
+BCRYPT_MAX_BYTES = 72
+
+_DUMMY_HASH = bcrypt.hashpw(b"dummy-password", bcrypt.gensalt()).decode()
+
+_mail_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="mail")
+
+class ServiceError(Exception):
+    """Error controlado: aborta la transacción (rollback) y devuelve body/status."""
+
+    def __init__(self, body: dict, status: int):
+        super().__init__(body.get("Mensaje") or body.get("Error"))
+        self.body = body
+        self.status = status
+
+@contextmanager
+def db_cursor():
+    """Cursor transaccional: commit al salir bien, rollback ante cualquier excepción,
+    y siempre cierra cursor y conexión."""
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    while True:
-        password = password_generator()
-        if password_check(password):
-            break
-    
-    hashed_pw = bcrypt.hashpw(
-        password.encode(),
-        bcrypt.gensalt()
-    ).decode()
-
     try:
-        cursor.execute("""
-            INSERT INTO     [MesaDeAyuda].[dbo].[usuario] 
-                            ([userNom], [userApPat], [userApMat], 
-                            [userMail], [userTelMovil], [userTelFijo], 
-                            [departamentoId], [password], [rolId], [changePassFlg], [ActiveFlg]) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (data['userNom'], data['userApPat'], data['userApMat'], 
-            data['userMail'], data["userTelMovil"], data["userTelFijo"], data['departamento'], 
-            hashed_pw, data['rol'], 1, 1))
-
-        conn.commit()
-
-        url = f"{MAIL_SERVICE}/registro"
-        body = {
-            'nombre_usuario':data['userNom'],
-            'correo':data['userMail'],
-            'password':password
-        }
-
-        mail = requests.post(
-            url,
-            json=body,
-            timeout=10
-        )
-
-        try:
-            mail_response = mail.json()
-        except ValueError:
-            mail_response = None
-
-        return {
-            "message": "Usuario creado",
-            "password":password,
-            "responseMail":{
-                "statusCode":mail.status_code,
-                "response":mail_response
-                }
-            }, 200
-    except Exception as e:
-        conn.rollback()
-        return {
-            'Mensaje':'Error con la creación del usuario',
-            "error": str(e)
-            }, 400
-
-def login_user(data):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    sql_login = """
-                SELECT userId, userMail, password, rolId, ActiveFlg, changePassFlg 
-                FROM usuario 
-                WHERE userMail = ?
-                """
-
-    sql_permisos =  """
-                    SELECT	a.id,
-                            a.permisoId,
-                            b.nomPermiso
-                    FROM [MesaDeAyuda].[dbo].[rolPermiso] a
-                    LEFT JOIN [MesaDeAyuda].[dbo].[permisos] b
-                        ON (a.permisoId= b.permisoId)
-                    WHERE rolId = ?
-                    """
-
-    save_token =    """
-                    INSERT INTO [MesaDeAyuda].[dbo].[TokenChangePass] 
-                    (usuarioId, tokenHash, fechaCreacion, fechaExpiracion)
-                    VALUES (?, ?, GETDATE(), DATEADD(MI, 30, GETDATE()))
-                    """
-
-    cursor.execute(sql_login, data["email"])
-    user_data = cursor.fetchone()
-
-    if not user_data:
-        return {"Error": "Usuario no existe"}, 404
-
-    if not bcrypt.checkpw(data["password"].encode(), user_data[2].encode()):
-        return {"Error": "Credenciales inválidas"}, 401
-
-    if not bool(user_data[4]):
-        return {'Error': 'Usuario no vigente en sistema'}, 401
-
-    if bool(user_data[5]):
-        token, token_hash = gen_token()
-        cursor.execute(save_token, (user_data[0], token_hash))
-        conn.commit()
-        return {
-            'Error': 'usuario debe cambiar clave',
-            'tokenChangePass': token
-                }, 422
-
-    cursor.execute(sql_permisos, (user_data[3]))
-
-    permisos = [res[2] for res in cursor.fetchall()]
-
-    user = {
-        "userId": user_data[0],
-        "userMail": user_data[1],
-        "permisos": permisos
-    }
-
-    token = generate_token(user)
-
-    return {
-        "token": token
-        }, 200
-
-def perfil_user(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    sql = """
-        SELECT
-            userId,
-            username,
-            userNom,
-            userApPat,
-            userApMat,
-            userMail,
-            userTelMovil,
-            userTelFijo,
-            departamentoId,
-            rolId,
-            ActiveFlg,
-            fechaCreacion,
-            fechaTerminoVig,
-            changePassFlg
-        FROM usuario
-        WHERE userId = ?
-    """
-
-    cursor.execute(sql, (user_id,))
-
-    usuario = cursor.fetchone()
-
-    if not usuario:
-        return None
-
-    columns = [column[0] for column in cursor.description]
-
-    response = dict(zip(columns, usuario))
-
-    return response, 200
-
-def val_change_pass_service(token):
-    val_token = """
-            SELECT [tokenId]
-                ,[usuarioId]
-                ,[tokenHash]
-                ,[fechaCreacion]
-                ,[fechaExpiracion]
-                ,[usado]
-                ,[fechaUso]
-                ,CAST(GETDATE() as datetime) as 'FechaActual'
-            FROM [MesaDeAyuda].[dbo].[TokenChangePass]
-            WHERE [tokenHash] = ?
-            """
-
-    hashed_token = hash_token(token)
-
-    try:
-        conn = get_connection()
         cursor = conn.cursor()
-
-        cursor.execute(val_token, hashed_token)
-
-        row = cursor.fetchone()
-
-        cursor.close()
+        try:
+            yield cursor
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+    finally:
         conn.close()
 
-        if row == None:
-            return {
-                'Mensaje':'Token no valido'
-            }, 404
-        if row[4] <= row[7]:
-            return {
-                'Mensaje':'Token expirado'
-            }, 406
-        if bool(row[5]) or row[6] is not None:
-            return {
-                'Mensaje':'Token usado'
-            }, 406
-        
+
+def _send_mail(endpoint: str, body: dict, descripcion: str) -> None:
+    """Se ejecuta en un hilo aparte. Nunca propaga excepciones ni loguea el body
+    (contiene contraseñas / tokens)."""
+    try:
+        resp = requests.post(f"{MAIL_SERVICE}/{endpoint}", json=body, timeout=10)
+        resp.raise_for_status()
+        logger.info("Correo '%s' enviado (status %s)", descripcion, resp.status_code)
+    except requests.RequestException:
+        logger.exception("Falló el envío del correo '%s'", descripcion)
+
+
+def _send_mail_async(endpoint: str, body: dict, descripcion: str) -> None:
+    _mail_executor.submit(_send_mail, endpoint, body, descripcion)
+
+
+def _generate_valid_password() -> str:
+    """Genera una contraseña válida con límite de intentos (evita loop infinito)."""
+    for _ in range(MAX_PASSWORD_ATTEMPTS):
+        password = password_generator()
+        if password_check(password):
+            return password
+    raise RuntimeError("No se pudo generar una contraseña válida")
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def _create_reset_token(cursor, user_id) -> str:
+    """Invalida los tokens vigentes del usuario y crea uno nuevo (30 min).
+    Debe llamarse dentro de una transacción."""
+    cursor.execute(
+        f"""
+        UPDATE {T_TOKEN}
+        SET fechaExpiracion = GETDATE()
+        WHERE usuarioId = ? AND usado = 0 AND fechaExpiracion > GETDATE()
+        """,
+        (user_id,),
+    )
+    token, token_hash = gen_token()
+    cursor.execute(
+        f"""
+        INSERT INTO {T_TOKEN} (usuarioId, tokenHash, fechaCreacion, fechaExpiracion)
+        VALUES (?, ?, GETDATE(), DATEADD(MI, 30, GETDATE()))
+        """,
+        (user_id, token_hash),
+    )
+    if cursor.rowcount != 1:
+        raise ServiceError({"Mensaje": "No se logró crear token"}, 400)
+    return token
+
+
+def _fetch_token(cursor, token_hash):
+    """La comparación de expiración se hace en SQL (misma hora que la BD)."""
+    cursor.execute(
+        f"""
+        SELECT usuarioId, usado, fechaUso,
+               CASE WHEN fechaExpiracion <= GETDATE() THEN 1 ELSE 0 END AS expirado
+        FROM {T_TOKEN}
+        WHERE tokenHash = ?
+        """,
+        (token_hash,),
+    )
+    return cursor.fetchone()
+
+
+def _token_error(row):
+    """Devuelve (body, status) si el token no es utilizable, o None si es válido."""
+    if row is None:
+        return {"Mensaje": "Token no valido"}, 404
+    if row.expirado:
+        return {"Mensaje": "Token expirado"}, 406
+    if row.usado or row.fechaUso is not None:
+        return {"Mensaje": "Token usado"}, 406
+    return None
+
+def _validate_registro(data: dict) -> list[str]:
+    errors = []
+    for f in ("userNom", "userApPat", "userMail", "rut"):
+        v = data.get(f)
+        if not isinstance(v, str) or not v.strip():
+            errors.append(f"Falta el campo '{f}'")
+    for f in ("departamento", "rol"):
+        if data.get(f) in (None, ""):
+            errors.append(f"Falta el campo '{f}'")
+    mail = data.get("userMail")
+    if isinstance(mail, str) and mail.strip() and not EMAIL_RE.match(mail.strip()):
+        errors.append("El correo no tiene un formato válido")
+    return errors
+
+def register_user(data):
+    data = data or {}
+    errors = _validate_registro(data)
+    if errors:
+        return {"Mensaje": "Datos inválidos", "errores": errors}, 400
+
+    nombre = data["userNom"].strip()
+    rut = data["rut"].strip().upper()
+    correo = data["userMail"].strip().lower()
+    ap_mat = data.get("userApMat")
+    ap_mat = ap_mat.strip() or None if isinstance(ap_mat, str) else None
+
+    try:
+        password = _generate_valid_password()
+        hashed_pw = _hash_password(password)
+    except Exception:
+        logger.exception("Error generando credenciales")
+        return {"Mensaje": "Error con la creación del usuario"}, 500
+
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(
+                f"""
+                INSERT INTO {T_USUARIO}
+                    ([userNom], [userRut], [userApPat], [userApMat], [userMail],
+                     [userTelMovil], [userTelFijo], [departamentoId],
+                     [password], [rolId], [changePassFlg], [ActiveFlg])
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+                """,
+                (
+                    nombre,
+                    rut,
+                    data["userApPat"].strip(),
+                    ap_mat,
+                    correo,
+                    data.get("userTelMovil"),
+                    data.get("userTelFijo"),
+                    data["departamento"],
+                    hashed_pw,
+                    data["rol"],
+                ),
+            )
+    except pyodbc.IntegrityError:
+        logger.warning("Violación de integridad al crear usuario %s", correo)
         return {
-            'Mensaje':'Token Valido',
-            'userId':row[1],
-            'hashed':hashed_token
-        }, 200
-    except Exception as e:
-        return {
-            'Mensaje':'Error validando token',
-            'Error':str(e)
-        }, 400
+            "Mensaje": "El usuario ya existe o los datos referenciados no son válidos"
+        }, 409
+    except Exception:
+        logger.exception("Error al crear usuario %s", correo)
+        return {"Mensaje": "Error con la creación del usuario"}, 500
+
+    _send_mail_async(
+        "registro",
+        {"nombre_usuario": nombre, "correo": correo, "password": password},
+        "registro",
+    )
+
+    return {"message": "Usuario creado", "responseMail": {"status": "en cola"}}, 200
+
+def login_user(data):
+    data = data or {}
+    email = data.get("email")
+    password = data.get("password")
+
+    if not isinstance(email, str) or not isinstance(password, str) or not email or not password:
+        return {"Error": "Credenciales inválidas"}, 400
+
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT userId, userMail, password, rolId, ActiveFlg, changePassFlg
+                FROM {T_USUARIO}
+                WHERE userMail = ?
+                """,
+                (email.strip(),),
+            )
+            user = cursor.fetchone()
+
+        stored_hash = user.password if user else _DUMMY_HASH
+        password_ok = bcrypt.checkpw(password.encode(), stored_hash.encode())
+
+        if not user or not password_ok:
+            return {"Error": "Credenciales inválidas"}, 401
+
+        if not bool(user.ActiveFlg):
+            return {"Error": "Usuario no vigente en sistema"}, 401
+
+        with db_cursor() as cursor:
+            if bool(user.changePassFlg):
+                token = _create_reset_token(cursor, user.userId)
+                return {
+                    "Error": "usuario debe cambiar clave",
+                    "tokenChangePass": token,
+                }, 422
+
+            cursor.execute(
+                f"""
+                SELECT b.nomPermiso
+                FROM {T_ROL_PERMISO} a
+                LEFT JOIN {T_PERMISOS} b ON a.permisoId = b.permisoId
+                WHERE a.rolId = ?
+                """,
+                (user.rolId,),
+            )
+            permisos = [row[0] for row in cursor.fetchall() if row[0]]
+
+        token = generate_token(
+            {"userId": user.userId, "userMail": user.userMail, "permisos": permisos}
+        )
+        return {"token": token}, 200
+
+    except ServiceError as e:
+        return e.body, e.status
+    except Exception:
+        logger.exception("Error en login")
+        return {"Error": "Error interno"}, 500
+
+def perfil_user(user_id):
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT userId, userNom, userApPat, userApMat, userMail,
+                       userTelMovil, userTelFijo, departamentoId, rolId, ActiveFlg,
+                       fechaCreacion, fechaTerminoVig, changePassFlg
+                FROM {T_USUARIO}
+                WHERE userId = ?
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return {"Mensaje": "Usuario no encontrado"}, 404
+            columns = [c[0] for c in cursor.description]
+            return dict(zip(columns, row)), 200
+    except Exception:
+        logger.exception("Error obteniendo perfil del usuario %s", user_id)
+        return {"Mensaje": "Error obteniendo perfil"}, 500
+
+def buscar_usuario(data, permisos):
+    if 'GESTIONAR_USUARIOS' not in permisos:
+        return {'Mensaje':'Usuario sin privilegios'}, 401
+
+    mail = data.get('mail')
+    rut = data.get('rut')
+
+def val_change_pass_service(token):
+    try:
+        with db_cursor() as cursor:
+            row = _fetch_token(cursor, hash_token(token))
+
+        error = _token_error(row)
+        if error:
+            return error
+
+        return {"Mensaje": "Token Valido", "userId": row.usuarioId}, 200
+    except Exception:
+        logger.exception("Error validando token")
+        return {"Mensaje": "Error validando token"}, 500
+
 
 def cambiar_contraseña_service(token, data):
-    password = data['password']
-    if password == None:
-        return {
-            'Mensaje':'Contraseña obligatoria'
-        }
-    if not password_check(password):
-        return {
-            'Mensaje':'Contraseña no cumple con politicas de seguridad'
-        }, 422
+    password = (data or {}).get("password")
 
-    cambiar_pass =  """
-                    UPDATE [MesaDeAyuda].[dbo].[usuario] 
-                    SET [password] = ?, [changePassFlg] = 0
-                    WHERE userId = ?
-                    """
+    if not isinstance(password, str) or not password:
+        return {"Mensaje": "Contraseña obligatoria"}, 400
+    if len(password.encode()) > BCRYPT_MAX_BYTES or not password_check(password):
+        return {"Mensaje": "Contraseña no cumple con politicas de seguridad"}, 422
 
-    token_upd = """
-                UPDATE [MesaDeAyuda].[dbo].[TokenChangePass] 
-                SET usado = 1, fechaUso = getdate()
-                WHERE tokenHash = ?
-                """
+    token_hash = hash_token(token)
+    hashed_pw = _hash_password(password)
 
     try:
-        response, status = val_change_pass_service(token)
-        if status != 200 or not response['userId']:
-            return response, status
+        with db_cursor() as cursor:
+            cursor.execute(
+                f"""
+                UPDATE {T_TOKEN}
+                SET usado = 1, fechaUso = GETDATE()
+                WHERE tokenHash = ? AND usado = 0 AND fechaUso IS NULL
+                  AND fechaExpiracion > GETDATE()
+                """,
+                (token_hash,),
+            )
+            if cursor.rowcount != 1:
+                error = _token_error(_fetch_token(cursor, token_hash))
+                raise ServiceError(*(error or ({"Mensaje": "No se pudo validar Token"}, 400)))
 
-        user_id = response['userId']
-        hashed_token = response['hashed']
+            cursor.execute(
+                f"SELECT usuarioId FROM {T_TOKEN} WHERE tokenHash = ?", (token_hash,)
+            )
+            user_id = cursor.fetchone()[0]
 
-        hashed_pw = bcrypt.hashpw(
-                password.encode(),
-                bcrypt.gensalt()
-            ).decode()
+            cursor.execute(
+                f"UPDATE {T_USUARIO} SET [password] = ?, [changePassFlg] = 0 WHERE userId = ?",
+                (hashed_pw, user_id),
+            )
+            if cursor.rowcount != 1:
+                raise ServiceError({"Mensaje": "No se encontró usuario"}, 404)
 
-        conn = get_connection()
-        cursor = conn.cursor()
+            cursor.execute(
+                f"""
+                UPDATE {T_TOKEN}
+                SET fechaExpiracion = GETDATE()
+                WHERE usuarioId = ? AND usado = 0 AND fechaExpiracion > GETDATE()
+                """,
+                (user_id,),
+            )
 
-        cursor.execute(cambiar_pass, (hashed_pw, user_id))
+        return {"Mensaje": "Contraseña cambiada con exito"}, 200
 
-        if cursor.rowcount != 1:
-            conn.rollback()
-            return {
-                'Mensaje':'No se encontró usuario'
-            }, 404
+    except ServiceError as e:
+        return e.body, e.status
+    except Exception:
+        logger.exception("Error cambiando contraseña")
+        return {"Mensaje": "Error cambiando contraseña"}, 500
 
-        cursor.execute(token_upd, (hashed_token,))
-
-        if cursor.rowcount != 1:
-            conn.rollback()
-            return {
-                'Mensaje':'No se pudo validar Token'
-            }, 400
-
-        conn.commit()
-
-        return {
-            'Mensaje':'Contraseña cambiada con exito'
-        }, 200
-    except Exception as e:
-        conn.rollback()
-        return {
-            'Mensaje':'Error cambiando contraseña',
-            'Error':str(e)
-        }, 400
 
 def recuperar_contraseña_service(mail):
-    select_user =   """
-                    SELECT	[userId],
-                            [userMail],
-                            [activeFlg],
-                            [userNom]
-                    FROM [MesaDeAyuda].[dbo].[usuario]
-                    WHERE userMail = ?
-                    """ 
+    respuesta_generica = {"Mensaje": "Solicitud procesada"}, 200
 
-    upd_user =  """
-                UPDATE [MesaDeAyuda].[dbo].[usuario] 
-                SET changePassFlg = 1
-                WHERE userId = ?
-                """
-
-    save_token =    """
-                    INSERT INTO [MesaDeAyuda].[dbo].[TokenChangePass] 
-                    (usuarioId, tokenHash, fechaCreacion, fechaExpiracion)
-                    VALUES (?, ?, GETDATE(), DATEADD(MI, 30, GETDATE()))
-                    """
-
-    url = f'{MAIL_SERVICE}/cambio-contraseña'
+    if not isinstance(mail, str) or not EMAIL_RE.match(mail.strip()):
+        return {"Mensaje": "Correo inválido"}, 400
+    mail = mail.strip()
 
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
+        with db_cursor() as cursor:
+            cursor.execute(
+                f"SELECT userId, userMail, activeFlg, userNom FROM {T_USUARIO} WHERE userMail = ?",
+                (mail,),
+            )
+            user = cursor.fetchone()
 
-        cursor.execute(select_user, (mail,))
-        user = cursor.fetchone()
+            if not user or not bool(user.activeFlg):
+                logger.info("Recuperación solicitada para usuario inexistente o inactivo")
+                return respuesta_generica
 
-        if user == None:
-            return {
-                'Mensaje':'Usuario no encontrado'
-            }, 404
-        if not bool(user[2]):
-            return {
-                'Mensaje':'Usuario no vigente en sistema'
-            }, 401
-        
-        token, token_hash = gen_token()
+            token = _create_reset_token(cursor, user.userId)
 
-        cursor.execute(upd_user, (user[0],))
-
-        if cursor.rowcount != 1:
-            conn.rollback()
-            return {
-                'Mensaje':'No se encontró usuario'
-            }, 404
-
-        cursor.execute(save_token, (user[0], token_hash))
-
-        if cursor.rowcount != 1:
-            conn.rollback()
-            return {
-                'Mensaje':'no se logró crear token'
-            }, 400
-
-        conn.commit()
-
-        body = {
-            'nombre_usuario':user[3],
-            'token':token,
-            'correo':user[1]
-        }
-
-        mail = requests.post(
-            url, 
-            json=body,
-            timeout=10
+        _send_mail_async(
+            "cambio-contraseña",
+            {"nombre_usuario": user.userNom, "token": token, "correo": user.userMail},
+            "cambio-contraseña",
         )
+        return respuesta_generica
 
-        try:
-            mail_response = mail.json()
-        except ValueError:
-            mail_response = None
-
-        return {
-            'Mensaje':'Solicitud procesada',
-            'responseMail':{
-                'statusCode':mail.status_code,
-                'responseMail':mail_response
-            }
-        }, 200
-
-    except Exception as e:
-        return {
-            'Mensaje':'Error solicitando cambio de contraseña',
-            'Error':str(e)
-        }, 400
-
-
-
-    
+    except ServiceError as e:
+        return e.body, e.status
+    except Exception:
+        logger.exception("Error solicitando cambio de contraseña")
+        return {"Mensaje": "Error solicitando cambio de contraseña"}, 500

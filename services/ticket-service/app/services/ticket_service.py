@@ -4,7 +4,8 @@ from app.utils.crear_ticket import *
 from app.utils.solicitante import *
 from app.utils.archivos import *
 from app.utils.is_color import is_color
-from flask import send_from_directory, send_file
+from app.utils.fecha_hora import *
+from flask import send_from_directory, send_file, request
 from app.utils.limpiar_json import limpiar_para_json
 import math
 import requests
@@ -22,6 +23,7 @@ logging.basicConfig(
 )
 
 MAIL_SERVICE = f"{os.getenv('NOTIFICATION_SERVICE')}/mail"
+MESSAGE_SERVICE = f"{os.getenv('MESSAGE_SERVICE')}/message"
 
 ESTADOS_ID_A_NOMBRE = {
     1: 'Abierto',
@@ -40,7 +42,7 @@ TRANSICIONES_ESTADO = {
     1: [3],
     3: [2, 4],
     4: [2, 5, 6],
-    5: [4],
+    5: [4, 5],
     6: [7, 8], 
     7: [4],
     2: [],
@@ -206,7 +208,6 @@ def crear_tickets_service(user_id, permisos, data, files):
 
             response_mail = {"statusCode": mail.status_code, "response": mail_response}
     except Exception as e:
-        # loguear el error, pero no abortar la respuesta de éxito
         response_mail = {"statusCode": None, "error": str(e)}
     finally:
         cursor.close()
@@ -224,24 +225,27 @@ def ver_detalle_ticket_service(ticket_id, user_id, permisos):
         conn = get_connection()
         cursor = conn.cursor()
 
-        sql = "SELECT * FROM [MesaDeAyuda].[dbo].[v_detalle_tickets] where ticketId = ?"
+        sql = """
+            SELECT *
+            FROM [MesaDeAyuda].[dbo].[v_detalle_tickets]
+            WHERE ticketId = ?
+        """
 
-        sql_derivacion = """SELECT  [derivacionId]
-                                    ,[ticketId]
-                                    ,e.[empresaId]
-                                    ,e.nomEmpresa
-                                    ,e.color
-                                    ,[nroTicket]
-                                    ,[fechaDerivacion]
-                                    ,[comentario]
-                                    ,[fechaFinalización]
-                                    ,[derivacionFinalizada]
-                                FROM [MesaDeAyuda].[dbo].[derivacionTicket] dt
-                                LEFT JOIN [MesaDeAyuda].[dbo].[empresas] e 
-                                    ON (dt.empresaId = e.empresaId)
-                                WHERE ticketId = ?"""
+        sql_derivacion = """
+            SELECT *
+            FROM [MesaDeAyuda].[dbo].[v_derivaciones_tickets]
+            WHERE ticketId = ?
+        """
+
+        sql_solicitante = """
+            SELECT *
+            FROM v_solicitantes
+            WHERE userId = ?
+              AND TipoUsuario = ?
+        """
 
         derivaciones = []
+        asignado = None
 
         cursor.execute(sql, ticket_id)
 
@@ -249,39 +253,87 @@ def ver_detalle_ticket_service(ticket_id, user_id, permisos):
 
         if data is None:
             return {
-                'Mensaje':'No se ha encontrado el Ticket'
-            },404
-        
+                'Mensaje': 'No se ha encontrado el Ticket'
+            }, 404
+
         usuario_solicitud = data[13]
-        
-        if not 'VER_TICKETS_TODOS' in permisos and usuario_solicitud != user_id:
+        tipo_usuario = data[14]
+        usuario_asignado = data[16]
+
+        if 'VER_TICKETS_TODOS' not in permisos and usuario_solicitud != user_id:
             return {
-                'Mensaje':'Sin permisos'
+                'Mensaje': 'Sin permisos'
             }, 403
-            
+
         columns = [col[0] for col in cursor.description]
         ticket = dict(zip(columns, data))
+
+        ticket = formatear_fechas(ticket)
 
         cursor.execute(sql_derivacion, ticket_id)
         data = cursor.fetchall()
 
-        for d in data:
-            columns = [col[0] for col in cursor.description]
-            derivaciones.append(dict(zip(columns, d)))
+        columns = [col[0] for col in cursor.description]
 
-        estados, s = estados_ticket_service(ticket_id, user_id, permisos)
+        for d in data:
+            derivacion = dict(zip(columns, d))
+            derivacion = formatear_fechas(derivacion)
+
+            derivaciones.append(derivacion)
+
+        cursor.execute(
+            sql_solicitante,
+            (usuario_solicitud, tipo_usuario)
+        )
+
+        data = cursor.fetchone()
+
+        solicitante = None
+
+        if data:
+            columns = [col[0] for col in cursor.description]
+            solicitante = dict(zip(columns, data))
+            solicitante = formatear_fechas(solicitante)
+
+        if usuario_asignado is not None:
+            cursor.execute(
+                sql_solicitante,
+                (usuario_asignado, 'Interno')
+            )
+
+            data = cursor.fetchone()
+
+            if data:
+                columns = [col[0] for col in cursor.description]
+                asignado = dict(zip(columns, data))
+                asignado = formatear_fechas(asignado)
+
+        estados, s = estados_ticket_service(
+            ticket_id,
+            user_id,
+            permisos
+        )
 
         return {
-            'Mensaje':'Ticket obtenido correctamente',
-            'Ticket':ticket,
-            'estados':estados,
-            'derivaciones':derivaciones
+            'Mensaje': 'Ticket obtenido correctamente',
+            'Ticket': ticket,
+            'estados': estados,
+            'derivaciones': derivaciones,
+            'solicitante': solicitante,
+            'Asignado': asignado
         }, 200
+
     except Exception as e:
         return {
-            'Mensaje':'Error obteniendo datos',
-            'Error':str(e)
+            'Mensaje': 'Error obteniendo datos',
+            'Error': str(e)
         }, 400
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def ver_dashboard_service():
     sql_estado = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_estado] WHERE estadoTicketId not in (4,5,7)'
@@ -791,33 +843,70 @@ def _manejar_resuelto(cursor, ticket_id, data, user_id, files):
             'Mensaje': 'Debe indicar el detalle de la resolución del ticket'
         }, 400
 
-    sql_mensaje = '''INSERT INTO [MesaDeAyuda].[dbo].[mensajesTicket]
-                    ([ticketId], [mensaje], [fechaMensaje], [userMensaje])
-                    OUTPUT inserted.mensajeId
-                    VALUES (?, ?, GETDATE(), ?)'''
+    form = {
+        'ticketId': str(ticket_id),
+        'mensaje': resolucion
+    }
 
-    cursor.execute(sql_mensaje, (ticket_id, resolucion, user_id))
-    mensaje_id = cursor.fetchone()[0]
+    archivos = []
 
-    guardar_adjunto(cursor, ticket_id, mensaje_id, user_id, files)
+    for archivo in files:
+        archivos.append(
+            (
+                'files',
+                (
+                    archivo.filename,
+                    archivo.stream,
+                    archivo.mimetype
+                )
+            )
+        )
+
+    token = request.cookies.get('access_token')
+
+    r = requests.post(
+        url=MESSAGE_SERVICE,
+        data=form,
+        files=archivos,
+        cookies={
+            'access_token': token
+        }
+    )
+
+    if not r.ok:
+        return {
+            'Mensaje': 'Error enviando la resolución al servicio de mensajes',
+            'Error': r.text
+        }, r.status_code
+
     return None
 
+def _validar_derivaciones_pendientes(cursor, ticket_id):
+    sql_derivaciones_pendientes = '''
+        SELECT COUNT(*)
+        FROM [MesaDeAyuda].[dbo].[derivacionTicket]
+        WHERE [ticketId] = ?
+          AND [derivacionFinalizada] = 0
+          AND [activo] = 1
+    '''
 
-def _finalizar_derivacion(cursor, ticket_id):
-    sql_finalizar = '''UPDATE [MesaDeAyuda].[dbo].[derivacionTicket]
-                        SET [derivacionFinalizada] = 1
-                        WHERE [ticketId] = ? AND [derivacionFinalizada] = 0'''
-    cursor.execute(sql_finalizar, (ticket_id,))
+    cursor.execute(sql_derivaciones_pendientes, (ticket_id,))
+    cantidad_pendientes = cursor.fetchone()[0]
+
+    if cantidad_pendientes > 0:
+        return {
+            'Mensaje': 'El ticket posee derivaciones pendientes de gestión'
+        }, 400
+
     return None
 
 MANEJADORES_ESTADO = {
-    5: _manejar_derivado,   # Derivado
-    6: _manejar_resuelto,   # Resuelto
+    5: _manejar_derivado, 
+    6: _manejar_resuelto,  
 }
 
-
 MANEJADORES_TRANSICION = {
-    (5, 4): _finalizar_derivacion,  # Derivado -> En Gestión
+    (5, 4): _validar_derivaciones_pendientes,
 }
 
 def gestionar_ticket_service(ticket_id, data, user_id, permisos, files=None):
@@ -834,7 +923,6 @@ def gestionar_ticket_service(ticket_id, data, user_id, permisos, files=None):
                         VALUES (?,?,?,?,?,?,GETDATE())'''
 
     nuevo_estado_id = int(data.get('nuevoEstado'))
-    print(nuevo_estado_id)
 
     if not isinstance(nuevo_estado_id, int) or nuevo_estado_id not in ESTADOS_ID_A_NOMBRE:
         return {
@@ -928,5 +1016,299 @@ def gestionar_ticket_service(ticket_id, data, user_id, permisos, files=None):
     finally:
         if cursor:
             cursor.close()
+        if conn:
+            conn.close()
+
+def modificar_derivacion_service(derivacion_id, user_id, permisos, data):
+    sql_derivacion = '''
+        SELECT
+            [derivacionId],
+            [ticketId],
+            [empresaId],
+            [nroTicket],
+            [comentario],
+            [derivacionFinalizada],
+            [activo]
+        FROM [MesaDeAyuda].[dbo].[derivacionTicket]
+        WHERE [derivacionId] = ?
+    '''
+
+    conn = None
+    cursor = None
+
+    try:
+        if not (
+            'GESTIONAR_TICKET' in permisos
+            or 'GESTIONAR_TICKET_ADMIN' in permisos
+        ):
+            return {
+                'Mensaje': 'Usuario sin privilegios para modificar la derivación'
+            }, 401
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(sql_derivacion, (derivacion_id,))
+        derivacion = cursor.fetchone()
+
+        if not derivacion:
+            return {
+                'Mensaje': 'Derivación no encontrada'
+            }, 404
+
+        (
+            derivacion_id_db,
+            ticket_id,
+            empresa_id_actual,
+            nro_ticket_actual,
+            comentario_actual,
+            derivacion_finalizada_actual,
+            activo_actual
+        ) = derivacion
+
+        campos_modificados = []
+
+        if 'empresaId' in data:
+            nuevo_empresa_id = data.get('empresaId')
+
+            if nuevo_empresa_id != empresa_id_actual:
+                campos_modificados.append({
+                    'campo': 'empresaId',
+                    'tipoDato': 'empresaId',
+                    'valorAnterior': str(empresa_id_actual),
+                    'valorNuevo': str(nuevo_empresa_id)
+                })
+
+        if 'nroTicket' in data:
+            nuevo_nro_ticket = data.get('nroTicket')
+
+            if nuevo_nro_ticket != nro_ticket_actual:
+                campos_modificados.append({
+                    'campo': 'nroTicket',
+                    'tipoDato': 'nroTicket',
+                    'valorAnterior': str(nro_ticket_actual),
+                    'valorNuevo': str(nuevo_nro_ticket)
+                })
+
+        if 'comentario' in data:
+            nuevo_comentario = data.get('comentario')
+
+            if nuevo_comentario != comentario_actual:
+                campos_modificados.append({
+                    'campo': 'comentario',
+                    'tipoDato': 'comentario',
+                    'valorAnterior': comentario_actual or '',
+                    'valorNuevo': nuevo_comentario or ''
+                })
+
+        if 'activo' in data:
+            nuevo_activo = data.get('activo')
+
+            # Normalizar a boolean/int
+            nuevo_activo = 1 if bool(nuevo_activo) else 0
+
+            if nuevo_activo != activo_actual:
+                campos_modificados.append({
+                    'campo': 'activo',
+                    'tipoDato': 'activo',
+                    'valorAnterior': str(activo_actual),
+                    'valorNuevo': str(nuevo_activo)
+                })
+
+        if not campos_modificados:
+            return {
+                'Mensaje': 'No se detectaron cambios en la derivación'
+            }, 400
+
+        campos_update = []
+        valores_update = []
+
+        for cambio in campos_modificados:
+            campo = cambio['campo']
+
+            campos_update.append(f'[{campo}] = ?')
+
+            if campo == 'empresaId':
+                valores_update.append(data.get('empresaId'))
+
+            elif campo == 'nroTicket':
+                valores_update.append(data.get('nroTicket'))
+
+            elif campo == 'comentario':
+                valores_update.append(data.get('comentario'))
+
+            elif campo == 'activo':
+                valores_update.append(
+                    1 if bool(data.get('activo')) else 0
+                )
+
+        valores_update.append(derivacion_id)
+
+        sql_update = f'''
+            UPDATE [MesaDeAyuda].[dbo].[derivacionTicket]
+            SET {', '.join(campos_update)}
+            WHERE [derivacionId] = ?
+        '''
+
+        cursor.execute(sql_update, valores_update)
+
+        sql_historial = '''
+            INSERT INTO [MesaDeAyuda].[dbo].[historialTicket]
+            (
+                [ticketId],
+                [campoModificado],
+                [tipoDato],
+                [valorAnterior],
+                [valorNuevo],
+                [usuarioCambio],
+                [fechaCambio]
+            )
+            VALUES (?, ?, ?, ?, ?, ?, GETDATE())
+        '''
+
+        for cambio in campos_modificados:
+            cursor.execute(sql_historial, (
+                ticket_id,
+                'DERIVACION',
+                cambio['tipoDato'],
+                cambio['valorAnterior'],
+                cambio['valorNuevo'],
+                user_id
+            ))
+
+        conn.commit()
+
+        return {
+            'Mensaje': 'Derivación modificada correctamente',
+            'DerivacionId': derivacion_id,
+            'TicketId': ticket_id
+        }, 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            'Mensaje': 'Error modificando derivación',
+            'Error': str(e)
+        }, 500
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
+def finalizar_derivacion_service(derivacion_id, user_id, permisos):
+    sql_derivacion = '''
+        SELECT
+            [derivacionId],
+            [ticketId],
+            [derivacionFinalizada],
+            [activo]
+        FROM [MesaDeAyuda].[dbo].[derivacionTicket]
+        WHERE [derivacionId] = ?
+    '''
+
+    sql_finalizar = '''
+        UPDATE [MesaDeAyuda].[dbo].[derivacionTicket]
+        SET
+            [derivacionFinalizada] = 1,
+            [fechaFinalización] = GETDATE()
+        WHERE [derivacionId] = ?
+    '''
+
+    sql_historial = '''
+        INSERT INTO [MesaDeAyuda].[dbo].[historialTicket]
+        (
+            [ticketId],
+            [campoModificado],
+            [tipoDato],
+            [valorAnterior],
+            [valorNuevo],
+            [usuarioCambio],
+            [fechaCambio]
+        )
+        VALUES (?, ?, ?, ?, ?, ?, GETDATE())
+    '''
+
+    conn = None
+    cursor = None
+
+    try:
+        if not (
+            'GESTIONAR_TICKET' in permisos
+            or 'GESTIONAR_TICKET_ADMIN' in permisos
+        ):
+            return {
+                'Mensaje': 'Usuario sin privilegios para finalizar la derivación'
+            }, 401
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(sql_derivacion, (derivacion_id,))
+        derivacion = cursor.fetchone()
+
+        if not derivacion:
+            return {
+                'Mensaje': 'Derivación no encontrada'
+            }, 404
+
+        (
+            derivacion_id_db,
+            ticket_id,
+            derivacion_finalizada,
+            activo
+        ) = derivacion
+
+        if not activo:
+            return {
+                'Mensaje': 'No es posible finalizar una derivación inactiva'
+            }, 400
+
+        if derivacion_finalizada:
+            return {
+                'Mensaje': 'La derivación ya se encuentra finalizada'
+            }, 400
+
+        cursor.execute(sql_finalizar, (derivacion_id,))
+
+        cursor.execute(sql_historial, (
+            ticket_id,
+            'DERIVACION',
+            'derivacionFinalizada',
+            '0',
+            '1',
+            user_id
+        ))
+
+        conn.commit()
+
+        return {
+            'Mensaje': 'Derivación finalizada correctamente',
+            'DerivacionId': derivacion_id,
+            'TicketId': ticket_id
+        }, 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        logging.exception(
+            'Error finalizando derivación %s',
+            derivacion_id
+        )
+
+        return {
+            'Mensaje': 'Error finalizando derivación',
+            'Error': str(e)
+        }, 500
+
+    finally:
+        if cursor:
+            cursor.close()
+
         if conn:
             conn.close()

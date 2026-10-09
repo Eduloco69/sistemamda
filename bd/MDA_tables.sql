@@ -4,6 +4,7 @@
 
 CREATE TABLE [usuario] (
   [userId] int IDENTITY(1,1) PRIMARY KEY,
+  [userRut] varchar(10) UNIQUE NOT NULL,
   [userNom] varchar(30),
   [userApPat] varchar(30),
   [userApMat] varchar(30),
@@ -155,7 +156,8 @@ GO
 CREATE TABLE [departamento] (
   [departamentoId] int PRIMARY KEY IDENTITY(1, 1),
   [nombre] varchar(50),
-  [tipoDepartamento] varchar(20)
+  [tipoDepartamento] varchar(20),
+  [activo] bit NOT NULL DEFAULT (1)
 )
 GO
 
@@ -189,7 +191,8 @@ CREATE TABLE [derivacionTicket] (
   [fechaDerivacion] datetime,
   [comentario] varchar(300),
   [fechaFinalización] datetime,
-  [derivacionFinalizada] bit NOT NULL DEFAULT (0)
+  [derivacionFinalizada] bit NOT NULL DEFAULT (0),
+  [activo] bit NOT NULL DEFAULT (1)
 )
 GO
 

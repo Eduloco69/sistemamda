@@ -57,3 +57,11 @@ def estados_ticket(ticket_id):
 @ticket_bp.route("/gestionar/<int:ticket_id>", methods=['POST'])
 def gestionar_ticket(ticket_id):
     return proxy_request(f"{TICKET_SERVICE}/ticket/gestionar/{ticket_id}")
+
+@ticket_bp.route("/derivacion/<int:derivacion_id>", methods=['PUT'])
+def modificar_derivacion(derivacion_id):
+    return proxy_request(f"{TICKET_SERVICE}/ticket/derivacion/{derivacion_id}")
+
+@ticket_bp.route("/derivacion/<int:derivacion_id>", methods=['POST'])
+def finalizar_derivacion(derivacion_id):
+    return proxy_request(f"{TICKET_SERVICE}/ticket/derivacion/{derivacion_id}")

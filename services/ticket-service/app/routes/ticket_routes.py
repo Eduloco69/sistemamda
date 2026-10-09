@@ -72,3 +72,13 @@ def estados_ticket(ticket_id):
 @auth_required
 def gestionar_ticket(ticket_id):
     return gestionar_ticket_controller(ticket_id)
+
+@ticket_bp.route("/derivacion/<int:derivacion_id>", methods=['PUT'])
+@auth_required
+def modificar_derivacion(derivacion_id):
+    return modificar_derivacion_controller(derivacion_id)
+
+@ticket_bp.route("/derivacion/<int:derivacion_id>", methods=['POST'])
+@auth_required
+def finalizar_derivacion(derivacion_id):
+    return finalizar_derivacion_controller(derivacion_id)

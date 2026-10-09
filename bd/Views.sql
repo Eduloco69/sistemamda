@@ -61,7 +61,16 @@ CREATE OR ALTER VIEW v_detalle_tickets as (
           ,f.[categoria]
           ,e.subCat
           ,e.subCatId
-          ,a.usuarioSolicitudTicket
+          ,CASE
+            WHEN a.usuarioSolicitudTicket IS NOT NULL
+                THEN a.usuarioSolicitudTicket
+            ELSE a.solicitanteTicket
+            END as 'usuarioSolicitudTicket'
+          ,CASE
+            WHEN a.usuarioSolicitudTicket IS NOT NULL
+                THEN 'Interno'
+            ELSE 'Externo'
+            END as 'TipoUsuarioSolicitante'
           ,CASE 
             WHEN a.usuarioSolicitudTicket IS NOT NULL 
                 THEN CONCAT(sol.userNom,' ',sol.userApPat,' ',sol.userApMat)
@@ -176,4 +185,43 @@ CREATE OR ALTER VIEW v_info_ticket_mail AS (
         ON (sc.categoriaId = c.categoriaId)
       LEFT JOIN [MesaDeAyuda].[dbo].tipoTicket tt
         ON (t.tipoTicket = tt.tipoTicketId)
+);
+
+CREATE OR ALTER VIEW v_derivaciones_tickets AS (
+    SELECT  [derivacionId]
+            ,[ticketId]
+            ,e.[empresaId]
+            ,e.nomEmpresa
+            ,e.color
+            ,[nroTicket]
+            ,[fechaDerivacion]
+            ,[comentario]
+            ,[fechaFinalización]
+            ,[derivacionFinalizada]
+    FROM [MesaDeAyuda].[dbo].[derivacionTicket] dt
+    LEFT JOIN [MesaDeAyuda].[dbo].[empresas] e 
+        ON (dt.empresaId = e.empresaId)
+    WHERE dt.[activo] = 1
+);
+
+CREATE OR ALTER VIEW v_solicitantes AS (
+    SELECT userId 
+          ,'Interno' as TipoUsuario
+          ,[userMail]
+          ,[userTelMovil]
+          ,[userTelFijo]
+          ,u.[departamentoId]
+          ,d.nombre as 'NombreDepartamento'
+      FROM [MesaDeAyuda].[dbo].[usuario] u
+      LEFT JOIN [MesaDeAyuda].[dbo].[departamento] d 
+        ON (u.departamentoId = d.departamentoId)
+    UNION ALL
+    SELECT [solicitanteId]
+          ,'Externo' as TipoUsuario
+          ,[correo]
+          ,[telefono]
+          ,NULL
+          ,NULL
+          ,NULL
+      FROM [MesaDeAyuda].[dbo].[solicitante]
 );

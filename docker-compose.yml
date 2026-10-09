@@ -3,7 +3,7 @@ services:
   gateway:
     build: ./api-gateway
     ports:
-      - "5010:8000"
+      - "5011:8000"
     env_file:
       - .env
     networks:

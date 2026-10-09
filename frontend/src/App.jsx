@@ -17,6 +17,7 @@ import Empresas from "./pages/Empresas"
 import CambiarContraseña from "./pages/cambiarContraseña"
 import RecuperarContraseña from "./pages/RecuperarContraseña"
 import TiposTicket from "./pages/TiposTicket"
+import Departamentos from "./pages/Departamentos"
 
 import useAuth from "./hooks/useAuth"
 
@@ -166,7 +167,12 @@ export default function App() {
           }
         />
 
-      </Route>z
+        <Route
+          path="/configuracion/departamentos"
+          element={<Departamentos />}
+        />
+
+      </Route>
 
       <Route
         path="/login"

@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState
-} from "react"
-
+import { useEffect, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 
 import api from "../services/api"
@@ -12,207 +7,280 @@ import useAuth from "../hooks/useAuth"
 import "../styles/TicketDetail.css"
 
 
-function IconPDF() {
+/* =====================================================
+   ICONOS
+===================================================== */
+
+const FILE = (
+  <>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </>
+)
+
+const ICONS = {
+  file: FILE,
+  pdf: <>{FILE}<path d="M9 13v4M12 11v6M15 14v3" /></>,
+  sheet: <>{FILE}<path d="M8 13h8M8 17h8M12 13v4" /></>,
+  doc: <>{FILE}<path d="M8 13h8M8 17h8" /></>,
+  zip: <>{FILE}<path d="M12 11h.01M12 14h.01M12 17h.01" /></>,
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <path d="M12 15V3" />
+    </>
+  ),
+  clip: <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
+  x: <path d="M18 6L6 18M6 6l12 12" />,
+  edit: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </>
+  ),
+  trash: (
+    <>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </>
+  ),
+  check: <polyline points="20 6 9 17 4 12" />,
+}
+
+function Icon({ name, size = 20, sw = 1.8 }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-      <line x1="9" y1="13" x2="9" y2="17"/>
-      <line x1="12" y1="11" x2="12" y2="17"/>
-      <line x1="15" y1="14" x2="15" y2="17"/>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={sw}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {ICONS[name]}
     </svg>
   )
 }
 
-
-function IconImage() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <circle cx="8.5" cy="8.5" r="1.5"/>
-      <polyline points="21 15 16 10 5 21"/>
-    </svg>
-  )
+const EXT_ICON = {
+  pdf: "pdf",
+  jpg: "image", jpeg: "image", png: "image", gif: "image", webp: "image",
+  xls: "sheet", xlsx: "sheet", csv: "sheet",
+  doc: "doc", docx: "doc", txt: "doc",
+  zip: "zip", gz: "zip", rar: "zip",
 }
 
-
-function IconSpreadsheet() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-      <line x1="8" y1="13" x2="16" y2="13"/>
-      <line x1="8" y1="17" x2="16" y2="17"/>
-      <line x1="12" y1="13" x2="12" y2="17"/>
-    </svg>
-  )
-}
+const FileIcon = ({ ext }) => (
+  <Icon name={EXT_ICON[ext?.toLowerCase()] || "file"} />
+)
 
 
-function IconDoc() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-      <line x1="8" y1="13" x2="16" y2="13"/>
-      <line x1="8" y1="17" x2="16" y2="17"/>
-    </svg>
-  )
-}
+/* =====================================================
+   UTILIDADES
+===================================================== */
 
+async function downloadArchivo(archivoId, nomArchivo) {
 
-function IconZip() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-      <line x1="12" y1="11" x2="12" y2="11"/>
-      <line x1="12" y1="14" x2="12" y2="14"/>
-      <line x1="12" y1="17" x2="12" y2="17"/>
-    </svg>
-  )
-}
-
-
-function IconFile() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-    </svg>
-  )
-}
-
-
-function IconDownload() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="7 10 12 15 17 10"/>
-      <line x1="12" y1="15" x2="12" y2="3"/>
-    </svg>
-  )
-}
-
-
-function IconClip() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-    </svg>
-  )
-}
-
-
-function IconX() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18"/>
-      <line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  )
-}
-
-
-const FILE_ICON_MAP = {
-  pdf: <IconPDF />,
-  jpg: <IconImage />,
-  jpeg: <IconImage />,
-  png: <IconImage />,
-  gif: <IconImage />,
-  webp: <IconImage />,
-  xls: <IconSpreadsheet />,
-  xlsx: <IconSpreadsheet />,
-  csv: <IconSpreadsheet />,
-  doc: <IconDoc />,
-  docx: <IconDoc />,
-  txt: <IconDoc />,
-  zip: <IconZip />,
-  gz: <IconZip />,
-  rar: <IconZip />,
-}
-
-
-function getFileIcon(extension) {
-
-  if (!extension) {
-    return <IconFile />
-  }
-
-  return (
-    FILE_ICON_MAP[
-      extension.toLowerCase()
-    ] || <IconFile />
-  )
-}
-
-
-async function downloadArchivo(
-  archivoId,
-  nomArchivo
-) {
-
-  const response = await api.get(
+  const { data } = await api.get(
     `/ticket/archivo/${archivoId}`,
-    {
-      responseType: "blob"
-    }
+    { responseType: "blob" }
   )
 
-  const url = window.URL.createObjectURL(
-    new Blob([response.data])
-  )
-
-  const link =
-    document.createElement("a")
+  const url = URL.createObjectURL(new Blob([data]))
+  const link = document.createElement("a")
 
   link.href = url
-
-  link.setAttribute(
-    "download",
-    nomArchivo
-  )
-
+  link.download = nomArchivo
   document.body.appendChild(link)
-
   link.click()
-
   link.remove()
 
-  window.URL.revokeObjectURL(url)
+  URL.revokeObjectURL(url)
 }
 
 
-function MessageArchivo({
-  archivo
-}) {
+function formatearFecha(valor) {
 
-  if (!archivo?.archivoId) {
-    return null
-  }
+  if (!valor) return null
+
+  const fecha = new Date(valor)
+
+  return Number.isNaN(fecha.getTime())
+    ? valor
+    : fecha.toLocaleString("es-CL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+}
+
+
+function errMsg(error) {
+
+  const data = error?.response?.data
+
+  if (Array.isArray(data?.Error)) return data.Error.join(" ")
+  if (typeof data?.Error === "string") return data.Error
+
+  return data?.Mensaje || "No fue posible realizar la operación."
+}
+
+
+/*
+ * AJUSTAR según cómo entregue los permisos tu useAuth().
+ * Soporta user.permisos / user.permissions (strings u objetos).
+ */
+function tienePermiso(user, ...permisos) {
+
+  const lista = user?.permisos || user?.permissions || user?.Permisos
+
+  return (
+    Array.isArray(lista) &&
+    lista.some(p =>
+      permisos.includes(
+        typeof p === "string"
+          ? p
+          : p?.permiso || p?.nombre || p?.Permiso || p?.codigo
+      )
+    )
+  )
+}
+
+
+const ACCIONES = [
+  { label: "Anular", estado: 2 },
+  { label: "Asignar", estado: 3, fn: "asignar" },
+  { label: "Tomar", estado: 3, fn: "tomar" },
+  { label: "Gestionar Ticket", estado: 4 },
+  { label: "Derivar", estado: 5 },
+  { label: "Resolver Ticket", estado: 6 },
+  { label: "Reabrir Ticket", estado: 7 },
+  { label: "Cerrar Ticket", estado: 8 },
+]
+
+const TITULOS = {
+  2: "Anular",
+  4: "Gestionar",
+  5: "Derivar",
+  6: "Resolver",
+  7: "Reabrir",
+  8: "Cerrar",
+}
+
+const FORM_VACIO = {
+  empresaId: "",
+  nroTicket: "",
+  resolucion: "",
+  archivo: null
+}
+
+
+/* =====================================================
+   COMPONENTES PEQUEÑOS
+===================================================== */
+
+function Modal({ title, subtitle, onClose, busy, wide, top, footer, children }) {
+  return (
+    <div className={`ticket-modal-overlay${top ? " ticket-modal-overlay-top" : ""}`}>
+      <div className={`ticket-modal${wide ? " ticket-modal-wide" : ""}`}>
+
+        <div className="ticket-modal-header">
+          <div>
+            <h2>{title}</h2>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+
+          {onClose && (
+            <button
+              className="ticket-modal-close"
+              onClick={onClose}
+              disabled={busy}
+            >
+              <Icon name="x" size={14} sw={2} />
+            </button>
+          )}
+        </div>
+
+        <div className="ticket-modal-body">{children}</div>
+
+        {footer && <div className="ticket-modal-footer">{footer}</div>}
+
+      </div>
+    </div>
+  )
+}
+
+
+function Footer({ onCancel, onOk, busy, okText, busyText }) {
+  return (
+    <>
+      <button className="ticket-modal-cancel" onClick={onCancel} disabled={busy}>
+        Cancelar
+      </button>
+
+      <button className="ticket-modal-confirm" onClick={onOk} disabled={busy}>
+        {busy ? busyText : okText}
+      </button>
+    </>
+  )
+}
+
+
+const Field = ({ label, children }) => (
+  <div className="ticket-form-group">
+    <label>{label}</label>
+    {children}
+  </div>
+)
+
+
+const Err = ({ msg }) =>
+  msg ? <div className="ticket-modal-error">{msg}</div> : null
+
+
+const EmpresaSelect = ({ value, onChange, empresas }) => (
+  <select value={value} onChange={e => onChange(e.target.value)}>
+    <option value="">Seleccionar empresa</option>
+
+    {empresas.map(e => (
+      <option key={e.empresaId} value={e.empresaId}>
+        {e.nomEmpresa}
+      </option>
+    ))}
+  </select>
+)
+
+
+function MessageArchivo({ archivo }) {
+
+  if (!archivo?.archivoId) return null
 
   return (
     <div className="message-archivo">
+
       <span className="archivo-icon">
-        {getFileIcon(
-          archivo.extension
-        )}
+        <FileIcon ext={archivo.extension} />
       </span>
 
-      <span className="archivo-nombre">
-        {archivo.nomArchivo}
-      </span>
+      <span className="archivo-nombre">{archivo.nomArchivo}</span>
 
       <button
         className="archivo-download-btn"
-        onClick={() =>
-          downloadArchivo(
-            archivo.archivoId,
-            archivo.nomArchivo
-          )
-        }
+        onClick={() => downloadArchivo(archivo.archivoId, archivo.nomArchivo)}
       >
-        <IconDownload />
+        <Icon name="download" size={16} />
       </button>
 
     </div>
@@ -220,570 +288,377 @@ function MessageArchivo({
 }
 
 
+/* Nombre de usuario con tarjeta de datos al pasar el mouse */
+function UsuarioHover({ nombre, datos }) {
+
+  if (!datos) return <span>{nombre}</span>
+
+  const filas = [
+    ["Departamento", datos.NombreDepartamento],
+    ["Correo", datos.userMail],
+    ["Teléfono fijo", datos.userTelFijo],
+    ["Teléfono móvil", datos.userTelMovil],
+  ]
+
+  return (
+    <span className="usuario-hover" tabIndex={0}>
+
+      <span className="usuario-hover-nombre">{nombre}</span>
+
+      <span className="usuario-hover-card" role="tooltip">
+
+        <strong>{nombre}</strong>
+
+        {filas.map(([etiqueta, valor]) => (
+          <span key={etiqueta} className="usuario-hover-fila">
+            <span className="usuario-hover-etiqueta">{etiqueta}</span>
+            <span>{valor ?? "No registrado"}</span>
+          </span>
+        ))}
+
+      </span>
+
+    </span>
+  )
+}
+
+
+const IconButton = ({ label, variant = "", icon, ...props }) => (
+  <button
+    type="button"
+    className={`icon-btn ${variant}`}
+    data-tooltip={label}
+    aria-label={label}
+    {...props}
+  >
+    <Icon name={icon} size={16} />
+  </button>
+)
+
+
+/* =====================================================
+   PÁGINA
+===================================================== */
+
 export default function TicketDetail() {
 
   const { id } = useParams()
-
   const { user } = useAuth()
 
+  const [data, setData] = useState(null)
 
-  const [ticket, setTicket] =
-    useState(null)
+  const [mensajes, setMensajes] = useState([])
+  const [nuevoMensaje, setNuevoMensaje] = useState("")
+  const [archivoAdjunto, setArchivoAdjunto] = useState(null)
 
-  const [estados, setEstados] =
-    useState(null)
+  const [modal, setModal] = useState(null)      // gestion | asignar | derivaciones
+  const [estado, setEstado] = useState(null)    // estado destino de la gestión
+  const [form, setForm] = useState(FORM_VACIO)
+  const [empresas, setEmpresas] = useState([])
+  const [tecnicos, setTecnicos] = useState([])
+  const [tecnico, setTecnico] = useState("")
 
-  const [mensajes, setMensajes] =
-    useState([])
+  const [editando, setEditando] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirm, setConfirm] = useState(null)
 
-  const [nuevoMensaje, setNuevoMensaje] =
-    useState("")
+  const [error, setError] = useState("")
+  const [busy, setBusy] = useState(false)
 
-  const [archivoAdjunto, setArchivoAdjunto] =
-    useState(null)
+  const messagesEndRef = useRef(null)
+  const fileInputRef = useRef(null)
 
 
-  const [modalGestion, setModalGestion] =
-    useState(false)
+  const ticket = data?.Ticket
+  const puedeGestionar = tienePermiso(user, "GESTIONAR_TICKET", "GESTIONAR_TICKET_ADMIN")
+  const derivaciones = (data?.derivaciones || []).filter(d => d.activo !== false)
 
-  const [estadoSeleccionado, setEstadoSeleccionado] =
-    useState(null)
+  const patchForm = patch => setForm(f => ({ ...f, ...patch }))
 
-  const [resolucion, setResolucion] =
-    useState("")
 
-  const [empresaId, setEmpresaId] =
-    useState("")
+  /* -------------------------------------------------
+     HELPERS
+  ------------------------------------------------- */
 
-  const [nroTicket, setNroTicket] =
-    useState("")
+  /* Ejecuta una operación con estado "procesando" y manejo de error */
+  async function run(fn) {
 
-  const [archivoResolucion, setArchivoResolucion] =
-    useState(null)
+    setError("")
+    setBusy(true)
 
-  const [tecnicos, setTecnicos] =
-    useState([])
+    try {
+      await fn()
+      return true
+    } catch (e) {
+      setError(errMsg(e))
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
 
-  const [tecnicoSeleccionado, setTecnicoSeleccionado] =
-    useState("")
-
-  const [modalAsignar, setModalAsignar] =
-    useState(false)
-
-  const [procesando, setProcesando] =
-    useState(false)
-
-  const [errorGestion, setErrorGestion] =
-    useState("")
-
-  const [errorAsignacion, setErrorAsignacion] =
-    useState("")
-
-  const messagesEndRef =
-    useRef(null)
-
-  const fileInputRef =
-    useRef(null)
-
-  const resolucionFileInputRef =
-    useRef(null)
 
   async function loadTicket() {
 
-    const response =
-      await api.get(
-        `/ticket/detalle/${id}`
-      )
+    const res = await api.get(`/ticket/detalle/${id}`)
 
-    setTicket(
-      response.data.Ticket
-    )
-
-    setEstados(
-      response.data.estados || null
-    )
+    setData(res.data)
   }
 
 
   async function loadMessages() {
 
-    const response =
-      await api.get(
-        `/message/${id}`
-      )
+    const res = await api.get(`/message/${id}`)
 
-    setMensajes(
-      response.data.mensajes || []
-    )
+    setMensajes(res.data.mensajes || [])
   }
 
 
-  function tieneProximoEstado(
-    estadoId
-  ) {
+  async function cargarEmpresas() {
 
-    if (
-      !estados?.ProximosEstados
-    ) {
-      return false
+    try {
+
+      const res = await api.get("/empresa")
+
+      setEmpresas((res.data.Empresas || []).filter(e => e.activo))
+
+    } catch (e) {
+
+      setEmpresas([])
+      setError(errMsg(e))
     }
-
-    return estados.ProximosEstados.some(
-      estado =>
-        Number(estado.estadoId) ===
-        Number(estadoId)
-    )
   }
 
 
-  function abrirGestion(
-    estadoId
-  ) {
-
-    setEstadoSeleccionado(
-      estadoId
+  const tieneProximoEstado = estadoId =>
+    !!data?.estados?.ProximosEstados?.some(
+      e => Number(e.estadoId) === Number(estadoId)
     )
 
-    setErrorGestion("")
 
-    setResolucion("")
-
-    setEmpresaId("")
-
-    setNroTicket(
-      ticket?.NroTicket || ""
-    )
-
-    setArchivoResolucion(null)
-
-    if (
-      resolucionFileInputRef.current
-    ) {
-      resolucionFileInputRef.current.value =
-        ""
-    }
-
-    setModalGestion(true)
+  const close = () => {
+    setModal(null)
+    setEstado(null)
+    setError("")
+    setForm(FORM_VACIO)
+    setTecnico("")
+    setEditando(null)
+    setConfirm(null)
   }
 
-
-  function cerrarModalGestion() {
-
-    if (procesando) {
-      return
-    }
-
-    setModalGestion(false)
-
-    setEstadoSeleccionado(null)
-
-    setErrorGestion("")
-
-    setResolucion("")
-
-    setEmpresaId("")
-
-    setNroTicket("")
-
-    setArchivoResolucion(null)
-  }
+  const tryClose = () => busy || close()
 
 
-  function obtenerMensajeError(
-    error
-  ) {
+  /* -------------------------------------------------
+     GESTIÓN DEL TICKET
+  ------------------------------------------------- */
 
-    const data =
-      error?.response?.data
+  async function abrirGestion(estadoId) {
 
-    if (Array.isArray(data?.Error)) {
-      return data.Error.join(" ")
-    }
+    setError("")
+    setEstado(estadoId)
+    setForm({ ...FORM_VACIO, nroTicket: ticket?.NroTicket || "" })
+    setModal("gestion")
 
-    if (typeof data?.Error === "string") {
-      return data.Error
-    }
-
-    if (data?.Mensaje) {
-      return data.Mensaje
-    }
-
-    return "No fue posible realizar la operación."
+    if (Number(estadoId) === 5) await cargarEmpresas()
   }
 
 
   async function confirmarGestion() {
 
-    if (!estadoSeleccionado) {
-      return
+    const n = Number(estado)
+
+    if (n === 5) {
+      if (!form.empresaId) return setError("Debes seleccionar una empresa.")
+      if (!form.nroTicket.trim()) return setError("Debes ingresar el número de ticket.")
     }
 
-    setErrorGestion("")
-
-
-    /*
-     * DERIVAR
-     */
-
-    if (
-      Number(estadoSeleccionado) === 5
-    ) {
-
-      if (!empresaId) {
-        setErrorGestion(
-          "Debes seleccionar una empresa."
-        )
-
-        return
-      }
-
-      if (!nroTicket.trim()) {
-        setErrorGestion(
-          "Debes ingresar el número de ticket."
-        )
-
-        return
-      }
+    if (n === 6 && !form.resolucion.trim()) {
+      return setError("Debes ingresar la resolución.")
     }
 
+    const fd = new FormData()
 
-    /*
-     * RESOLVER
-     */
+    fd.append("nuevoEstado", estado)
 
-    if (
-      Number(estadoSeleccionado) === 6
-    ) {
-
-      if (!resolucion.trim()) {
-        setErrorGestion(
-          "Debes ingresar la resolución."
-        )
-
-        return
-      }
+    if (n === 5) {
+      fd.append("empresaId", form.empresaId)
+      fd.append("nroTicket", form.nroTicket.trim())
     }
 
+    if (n === 6) {
+      fd.append("resolucion", form.resolucion.trim())
+      if (form.archivo) fd.append("Files", form.archivo)
+    }
 
-    setProcesando(true)
-
-
-    try {
-
-      const formData =
-        new FormData()
-
-
-      formData.append(
-        "nuevoEstado",
-        estadoSeleccionado
-      )
-
-      if (
-        Number(estadoSeleccionado) === 5
-      ) {
-
-        formData.append(
-          "empresaId",
-          empresaId
-        )
-
-        formData.append(
-          "nroTicket",
-          nroTicket.trim()
-        )
-      }
-
-
-      if (
-        Number(estadoSeleccionado) === 6
-      ) {
-
-        formData.append(
-          "resolucion",
-          resolucion.trim()
-        )
-
-        if (archivoResolucion) {
-
-          formData.append(
-            "Files",
-            archivoResolucion
-          )
-        }
-      }
-
-      await api.post(
-        `/ticket/gestionar/${id}`,
-        formData
-      )
-
-      setModalGestion(false)
-
-      setEstadoSeleccionado(null)
-
-      setResolucion("")
-
-      setEmpresaId("")
-
-      setNroTicket("")
-
-      setArchivoResolucion(null)
-
-
-      if (
-        resolucionFileInputRef.current
-      ) {
-        resolucionFileInputRef.current.value =
-          ""
-      }
-
-
+    const ok = await run(async () => {
+      await api.post(`/ticket/gestionar/${id}`, fd)
       await loadTicket()
+    })
 
-    } catch (error) {
-
-      setErrorGestion(
-        obtenerMensajeError(error)
-      )
-
-    } finally {
-
-      setProcesando(false)
-    }
+    if (ok) close()
   }
 
 
-  async function cargarTecnicos() {
-
-    setErrorAsignacion("")
-
-    try {
-
-      const response =
-        await api.get(
-          "/ticket/tecnico"
-        )
-
-      setTecnicos(
-        response.data.Tecnicos || []
-      )
-
-    } catch (error) {
-
-      setErrorAsignacion(
-        obtenerMensajeError(error)
-      )
-    }
-  }
-
+  /* -------------------------------------------------
+     ASIGNACIÓN
+  ------------------------------------------------- */
 
   async function abrirAsignacion() {
 
-    await cargarTecnicos()
+    setError("")
 
-    setTecnicoSeleccionado("")
-
-    setModalAsignar(true)
-  }
-
-
-  function cerrarModalAsignar() {
-
-    if (procesando) {
-      return
+    try {
+      const res = await api.get("/ticket/tecnico")
+      setTecnicos(res.data.Tecnicos || [])
+    } catch (e) {
+      setError(errMsg(e))
     }
 
-    setModalAsignar(false)
-
-    setTecnicoSeleccionado("")
-
-    setErrorAsignacion("")
+    setTecnico("")
+    setModal("asignar")
   }
 
 
   async function confirmarAsignacion() {
 
-    if (!tecnicoSeleccionado) {
+    if (!tecnico) return setError("Debes seleccionar un técnico.")
 
-      setErrorAsignacion(
-        "Debes seleccionar un técnico."
-      )
-
-      return
-    }
-
-
-    setErrorAsignacion("")
-
-    setProcesando(true)
-
-
-    try {
-
-      await api.post(
-        `/ticket/asignar/${id}`,
-        {
-          accion: "Asignar",
-          tecnico: Number(
-            tecnicoSeleccionado
-          )
-        }
-      )
-
-
-      setModalAsignar(false)
-
-      setTecnicoSeleccionado("")
-
+    const ok = await run(async () => {
+      await api.post(`/ticket/asignar/${id}`, {
+        accion: "Asignar",
+        tecnico: Number(tecnico)
+      })
       await loadTicket()
+    })
 
-    } catch (error) {
-
-      setErrorAsignacion(
-        obtenerMensajeError(error)
-      )
-
-    } finally {
-
-      setProcesando(false)
-    }
+    if (ok) close()
   }
 
 
-  async function tomarTicket() {
+  const tomarTicket = () =>
+    run(async () => {
+      await api.post(`/ticket/asignar/${id}`, { accion: "Tomar" })
+      await loadTicket()
+    })
 
-    setProcesando(true)
 
-    try {
+  /* -------------------------------------------------
+     DERIVACIONES
+  ------------------------------------------------- */
 
-      await api.post(
-        `/ticket/asignar/${id}`,
-        {
-          accion: "Tomar"
-        }
-      )
+  async function abrirDerivaciones() {
+
+    setError("")
+    setEditando(null)
+    setConfirm(null)
+    setModal("derivaciones")
+
+    await cargarEmpresas()
+  }
+
+
+  function iniciarEdicion(d) {
+
+    setError("")
+    setEditando(d.derivacionId)
+
+    setEditForm({
+      empresaId: String(d.empresaId ?? ""),
+      nroTicket: d.nroTicket || "",
+      comentario: d.comentario || ""
+    })
+  }
+
+
+  async function guardarEdicion(d) {
+
+    const actual = {
+      empresaId: String(d.empresaId ?? ""),
+      nroTicket: d.nroTicket || "",
+      comentario: d.comentario || ""
+    }
+
+    const nuevo = {
+      ...editForm,
+      nroTicket: editForm.nroTicket.trim(),
+      comentario: editForm.comentario.trim()
+    }
+
+    /* Solo se envía lo que cambió */
+    const cambios = {}
+
+    for (const k of Object.keys(actual)) {
+      if (nuevo[k] !== actual[k]) {
+        cambios[k] = k === "empresaId" ? Number(nuevo[k]) : nuevo[k]
+      }
+    }
+
+    if (!Object.keys(cambios).length) return setEditando(null)
+
+    if ("nroTicket" in cambios && !cambios.nroTicket) {
+      return setError("El número de ticket no puede estar vacío.")
+    }
+
+    if ("empresaId" in cambios && !cambios.empresaId) {
+      return setError("Debes seleccionar una empresa.")
+    }
+
+    const ok = await run(async () => {
+      await api.put(`/ticket/derivacion/${d.derivacionId}`, cambios)
+      await loadTicket()
+    })
+
+    if (ok) setEditando(null)
+  }
+
+
+  async function ejecutarConfirmacion() {
+
+    const { tipo, d } = confirm
+    const url = `/ticket/derivacion/${d.derivacionId}`
+
+    await run(async () => {
+
+      if (tipo === "borrar") await api.put(url, { activo: false })
+      else await api.post(url)
 
       await loadTicket()
+    })
 
-    } catch (error) {
+    setConfirm(null)
+  }
 
-      setErrorGestion(
-        obtenerMensajeError(error)
-      )
 
-    } finally {
+  /* -------------------------------------------------
+     CHAT
+  ------------------------------------------------- */
 
-      setProcesando(false)
-    }
+  function clearAdjunto() {
+
+    setArchivoAdjunto(null)
+
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
 
   async function sendMessage() {
 
-    if (
-      !nuevoMensaje.trim() &&
-      !archivoAdjunto
-    ) {
-      return
-    }
+    if (!nuevoMensaje.trim() && !archivoAdjunto) return
 
+    const fd = new FormData()
 
-    const formData =
-      new FormData()
+    fd.append("ticketId", id)
+    fd.append("mensaje", nuevoMensaje)
 
+    if (archivoAdjunto) fd.append("files", archivoAdjunto)
 
-    formData.append(
-      "ticketId",
-      id
-    )
-
-    formData.append(
-      "mensaje",
-      nuevoMensaje
-    )
-
-
-    if (archivoAdjunto) {
-
-      formData.append(
-        "files",
-        archivoAdjunto
-      )
-    }
-
-
-    await api.post(
-      "/message",
-      formData
-    )
-
+    await api.post("/message", fd)
 
     setNuevoMensaje("")
-
-    setArchivoAdjunto(null)
-
-
-    if (
-      fileInputRef.current
-    ) {
-
-      fileInputRef.current.value =
-        ""
-    }
-
+    clearAdjunto()
 
     await loadMessages()
-  }
-
-
-  function handleFileChange(e) {
-
-    const file =
-      e.target.files[0]
-
-    setArchivoAdjunto(
-      file || null
-    )
-  }
-
-
-  function handleResolucionFileChange(e) {
-
-    const file =
-      e.target.files[0]
-
-    setArchivoResolucion(
-      file || null
-    )
-  }
-
-
-  function removeAdjunto() {
-
-    setArchivoAdjunto(null)
-
-    if (
-      fileInputRef.current
-    ) {
-
-      fileInputRef.current.value =
-        ""
-    }
-  }
-
-
-  function scrollToBottom() {
-
-    setTimeout(() => {
-
-      messagesEndRef
-        ?.current
-        ?.scrollIntoView({
-          behavior: "smooth"
-        })
-
-    }, 100)
   }
 
 
@@ -792,59 +667,27 @@ export default function TicketDetail() {
     async function init() {
 
       await loadTicket()
-
       await loadMessages()
 
+      if (!socket.connected) socket.connect()
 
-      if (!socket.connected) {
-        socket.connect()
-      }
+      socket.emit("join_ticket", { ticketId: id })
 
+      socket.on("new_message", msg => {
 
-      socket.emit(
-        "join_ticket",
-        {
-          ticketId: id
-        }
-      )
+        if (String(msg.ticketId) !== String(id)) return
 
-
-      socket.on(
-        "new_message",
-        data => {
-
-          if (
-            String(data.ticketId) !==
-            String(id)
-          ) {
-            return
-          }
-
-
-          setMensajes(
-            prev => [
-              ...prev,
-              {
-                ...data,
-                mine:
-                  data.usuario.userId ===
-                  user.userId
-              }
-            ]
-          )
-        }
-      )
+        setMensajes(prev => [
+          ...prev,
+          { ...msg, mine: msg.usuario.userId === user.userId }
+        ])
+      })
     }
-
 
     init()
 
-
     return () => {
-
-      socket.off(
-        "new_message"
-      )
+      socket.off("new_message")
     }
 
   }, [id])
@@ -852,762 +695,495 @@ export default function TicketDetail() {
 
   useEffect(() => {
 
-    scrollToBottom()
+    const t = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 100)
+
+    return () => clearTimeout(t)
 
   }, [mensajes])
 
 
-  if (!ticket) {
+  if (!ticket) return <h2>Cargando ticket...</h2>
 
-    return (
-      <h2>
-        Cargando ticket...
-      </h2>
-    )
-  }
 
+  const handlers = { asignar: abrirAsignacion, tomar: tomarTicket }
+
+  const meta = [
+    ["Fecha de creación", formatearFecha(ticket.fechaCreacionTicket) || "—"],
+    ["Última gestión", formatearFecha(ticket.fechaActualizacionTicket) || "—"],
+    [
+      "Solicitante",
+      <UsuarioHover nombre={ticket.usuarioSolicitante} datos={data.solicitante} />
+    ],
+    [
+      "Técnico asignado",
+      ticket.usuarioAsignado
+        ? <UsuarioHover nombre={ticket.usuarioAsignado} datos={data.Asignado} />
+        : <span className="sin-asignacion">Sin asignación</span>
+    ],
+  ]
+
+
+  /* -------------------------------------------------
+     RENDER
+  ------------------------------------------------- */
 
   return (
 
     <div className="ticket-detail-page">
 
 
-      {/* =================================================
-          INFORMACIÓN DEL TICKET
-      ================================================= */}
+      {/* INFORMACIÓN DEL TICKET */}
 
       <div className="ticket-info-card">
 
-        <div>
+        <div className="ticket-info-main">
 
-          <h1>
-            {ticket.NroTicket}
-          </h1>
+          <h1>{ticket.NroTicket}</h1>
 
-          <h2>
-            {ticket.tituloTicket}
-          </h2>
-
+          <h2>{ticket.tituloTicket}</h2>
 
           <div className="ticket-badges">
-
-            <span className="badge priority">
-              {ticket.prioridadTicket}
-            </span>
-
-            <span className="badge status">
-              {ticket.estadoTicket}
-            </span>
-
-            <span className="badge category">
-              {ticket.subCat}
-            </span>
-
+            <span className="badge priority">{ticket.prioridadTicket}</span>
+            <span className="badge status">{ticket.estadoTicket}</span>
+            <span className="badge category">{ticket.subCat}</span>
           </div>
 
         </div>
 
-
-        {/* =================================================
-            ACCIONES
-        ================================================= */}
 
         <div className="ticket-actions">
 
+          <button disabled={busy}>Modificar</button>
 
-          {/* ANULAR */}
+          <button disabled={busy}>Historial</button>
 
-          {tieneProximoEstado(2) && (
-
-            <button
-              onClick={() =>
-                abrirGestion(2)
-              }
-              disabled={procesando}
-            >
-              Anular
-            </button>
-
-          )}
-
-
-          {/* ASIGNAR */}
-
-          {tieneProximoEstado(3) && (
-
-            <button
-              onClick={
-                abrirAsignacion
-              }
-              disabled={procesando}
-            >
-              Asignar
-            </button>
-
-          )}
-
-
-          {/* TOMAR */}
-
-          {tieneProximoEstado(3) && (
-
-            <button
-              onClick={tomarTicket}
-              disabled={procesando}
-            >
-              Tomar
-            </button>
-
-          )}
-
-
-          {/* EN GESTIÓN */}
-
-          {tieneProximoEstado(4) && (
-
-            <button
-              onClick={() =>
-                abrirGestion(4)
-              }
-              disabled={procesando}
-            >
-              Gestionar Ticket
-            </button>
-
-          )}
-
-
-          {/* DERIVAR */}
-
-          {tieneProximoEstado(5) && (
-
-            <button
-              onClick={() =>
-                abrirGestion(5)
-              }
-              disabled={procesando}
-            >
-              Derivar
-            </button>
-
-          )}
-
-
-          {/* RESUELTO */}
-
-          {tieneProximoEstado(6) && (
-
-            <button
-              onClick={() =>
-                abrirGestion(6)
-              }
-              disabled={procesando}
-            >
-              Resolver Ticket
-            </button>
-
-          )}
-
-
-          {/* REABRIR */}
-
-          {tieneProximoEstado(7) && (
-
-            <button
-              onClick={() =>
-                abrirGestion(7)
-              }
-              disabled={procesando}
-            >
-              Reabrir Ticket
-            </button>
-
-          )}
-
-
-          {/* CERRAR */}
-
-          {tieneProximoEstado(8) && (
-
-            <button
-              onClick={() =>
-                abrirGestion(8)
-              }
-              disabled={procesando}
-            >
-              Cerrar Ticket
-            </button>
-
-          )}
-
-
-          {/* MODIFICAR */}
-
-          <button
-            disabled={procesando}
-          >
-            Modificar
-          </button>
-
-
-          {/* HISTORIAL */}
-
-          <button
-            disabled={procesando}
-          >
-            Historial
+          <button onClick={abrirDerivaciones} disabled={busy}>
+            Derivaciones{derivaciones.length > 0 && ` (${derivaciones.length})`}
           </button>
 
         </div>
 
-      </div>
 
-
-      {/* =================================================
-          CHAT
-      ================================================= */}
-
-      <div className="chat-box">
-
-        {mensajes.map(
-          msg => (
-
-            <div
-              key={
-                msg.mensajeId
-              }
-              className={
-                msg.mine
-                  ? "message mine"
-                  : "message"
-              }
-            >
-
-              <small>
-                {msg.usuario.nombre}
-              </small>
-
-              <p>
-                {msg.mensaje}
-              </p>
-
-              <MessageArchivo
-                archivo={
-                  msg.archivo
-                }
-              />
-
+        <dl className="ticket-meta">
+          {meta.map(([label, valor]) => (
+            <div key={label} className="ticket-meta-item">
+              <dt>{label}</dt>
+              <dd>{valor}</dd>
             </div>
-
-          )
-        )}
-
-
-        <div
-          ref={
-            messagesEndRef
-          }
-        />
+          ))}
+        </dl>
 
       </div>
 
 
-      {/* =================================================
-          INPUT DEL CHAT
-      ================================================= */}
+      {/* GESTIÓN (requiere permiso) */}
 
-      <div className="chat-input">
+      {puedeGestionar && (
 
+        <div className="ticket-manage-card">
 
-        {archivoAdjunto && (
-
-          <div className="adjunto-preview">
-
-            <span className="archivo-icon">
-
-              {getFileIcon(
-                archivoAdjunto.name
-                  .split(".")
-                  .pop()
-              )}
-
-            </span>
-
-
-            <span className="archivo-nombre">
-
-              {archivoAdjunto.name}
-
-            </span>
-
-
-            <button
-              className="adjunto-remove-btn"
-              onClick={
-                removeAdjunto
-              }
-            >
-              <IconX />
-            </button>
-
+          <div className="ticket-actions">
+            {ACCIONES.map(a => (
+              <button
+                key={a.label}
+                onClick={handlers[a.fn] || (() => abrirGestion(a.estado))}
+                disabled={busy || !tieneProximoEstado(a.estado)}
+              >
+                {a.label}
+              </button>
+            ))}
           </div>
 
-        )}
-
-
-        <div className="chat-input-row">
-
-
-          <input
-            value={
-              nuevoMensaje
-            }
-            onChange={
-              e =>
-                setNuevoMensaje(
-                  e.target.value
-                )
-            }
-            placeholder="Escribe un mensaje..."
-            onKeyDown={
-              e => {
-
-                if (
-                  e.key === "Enter" &&
-                  !e.shiftKey
-                ) {
-
-                  e.preventDefault()
-
-                  sendMessage()
-                }
-
-              }
-            }
-          />
-
-
-          <input
-            type="file"
-            ref={
-              fileInputRef
-            }
-            onChange={
-              handleFileChange
-            }
-            style={{
-              display: "none"
-            }}
-          />
-
-
-          <button
-            className="clip-btn"
-            onClick={() =>
-              fileInputRef
-                .current
-                ?.click()
-            }
-          >
-            <IconClip />
-          </button>
-
-
-          <button
-            onClick={
-              sendMessage
-            }
-          >
-            Enviar
-          </button>
-
-
-        </div>
-
-      </div>
-
-
-      {/* =================================================
-          MODAL GESTIONAR TICKET
-      ================================================= */}
-
-      {modalGestion && (
-
-        <div className="ticket-modal-overlay">
-
-          <div className="ticket-modal">
-
-            <div className="ticket-modal-header">
-
-              <div>
-
-                <h2>
-                  {estadoSeleccionado === 2 &&
-                    "Anular ticket"}
-
-                  {estadoSeleccionado === 4 &&
-                    "Gestionar ticket"}
-
-                  {estadoSeleccionado === 5 &&
-                    "Derivar ticket"}
-
-                  {estadoSeleccionado === 6 &&
-                    "Resolver ticket"}
-
-                  {estadoSeleccionado === 7 &&
-                    "Reabrir ticket"}
-
-                  {estadoSeleccionado === 8 &&
-                    "Cerrar ticket"}
-                </h2>
-
-                <p>
-                  Esta acción modificará el estado
-                  del ticket.
-                </p>
-
-              </div>
-
-
-              <button
-                className="ticket-modal-close"
-                onClick={
-                  cerrarModalGestion
-                }
-                disabled={
-                  procesando
-                }
-              >
-                <IconX />
-              </button>
-
-            </div>
-
-
-            <div className="ticket-modal-body">
-
-
-              <div className="ticket-confirmation">
-
-                <strong>
-                  ¿Confirmar gestión?
-                </strong>
-
-                <span>
-                  Esta acción no podrá deshacerse
-                  desde esta pantalla.
-                </span>
-
-              </div>
-
-
-              {/* ================================
-                  DERIVAR
-              ================================= */}
-
-              {Number(
-                estadoSeleccionado
-              ) === 5 && (
-
-                <>
-
-                  <div className="ticket-form-group">
-
-                    <label>
-                      Empresa
-                    </label>
-
-                    <input
-                      type="text"
-                      value={empresaId}
-                      onChange={
-                        e =>
-                          setEmpresaId(
-                            e.target.value
-                          )
-                      }
-                      placeholder="ID de empresa"
-                    />
-
-                  </div>
-
-
-                  <div className="ticket-form-group">
-
-                    <label>
-                      Número de ticket
-                    </label>
-
-                    <input
-                      type="text"
-                      value={nroTicket}
-                      onChange={
-                        e =>
-                          setNroTicket(
-                            e.target.value
-                          )
-                      }
-                      placeholder="Número de ticket"
-                    />
-
-                  </div>
-
-                </>
-
-              )}
-
-
-              {/* ================================
-                  RESOLVER
-              ================================= */}
-
-              {Number(
-                estadoSeleccionado
-              ) === 6 && (
-
-                <>
-
-                  <div className="ticket-form-group">
-
-                    <label>
-                      Resolución
-                    </label>
-
-                    <textarea
-                      value={resolucion}
-                      onChange={
-                        e =>
-                          setResolucion(
-                            e.target.value
-                          )
-                      }
-                      placeholder="Describe la resolución del ticket..."
-                      rows="5"
-                    />
-
-                  </div>
-
-
-                  <div className="ticket-form-group">
-
-                    <label>
-                      Archivo
-                    </label>
-
-                    <input
-                      type="file"
-                      ref={
-                        resolucionFileInputRef
-                      }
-                      onChange={
-                        handleResolucionFileChange
-                      }
-                    />
-
-                    {archivoResolucion && (
-
-                      <span className="ticket-file-selected">
-                        {archivoResolucion.name}
-                      </span>
-
-                    )}
-
-                  </div>
-
-                </>
-
-              )}
-
-
-              {errorGestion && (
-
-                <div className="ticket-modal-error">
-
-                  {errorGestion}
-
-                </div>
-
-              )}
-
-            </div>
-
-
-            <div className="ticket-modal-footer">
-
-              <button
-                className="ticket-modal-cancel"
-                onClick={
-                  cerrarModalGestion
-                }
-                disabled={
-                  procesando
-                }
-              >
-                Cancelar
-              </button>
-
-
-              <button
-                className="ticket-modal-confirm"
-                onClick={
-                  confirmarGestion
-                }
-                disabled={
-                  procesando
-                }
-              >
-
-                {procesando
-                  ? "Procesando..."
-                  : "Confirmar"}
-
-              </button>
-
-            </div>
-
-          </div>
+          {!modal && <Err msg={error} />}
 
         </div>
 
       )}
 
 
-      {/* =================================================
-          MODAL ASIGNAR
-      ================================================= */}
+      {/* CHAT */}
 
-      {modalAsignar && (
+      <div className="chat-box">
 
-        <div className="ticket-modal-overlay">
+        {mensajes.map(msg => (
 
-          <div className="ticket-modal">
+          <div
+            key={msg.mensajeId}
+            className={msg.mine ? "message mine" : "message"}
+          >
+            <small>{msg.usuario.nombre}</small>
 
-            <div className="ticket-modal-header">
+            <p>{msg.mensaje}</p>
 
-              <div>
+            <MessageArchivo archivo={msg.archivo} />
+          </div>
 
-                <h2>
-                  Asignar ticket
-                </h2>
+        ))}
 
-                <p>
-                  Selecciona el técnico al que
-                  deseas asignar el ticket.
-                </p>
+        <div ref={messagesEndRef} />
 
-              </div>
+      </div>
 
 
-              <button
-                className="ticket-modal-close"
-                onClick={
-                  cerrarModalAsignar
-                }
-                disabled={
-                  procesando
-                }
-              >
-                <IconX />
-              </button>
+      <div className="chat-input">
 
-            </div>
+        {archivoAdjunto && (
 
+          <div className="adjunto-preview">
 
-            <div className="ticket-modal-body">
+            <span className="archivo-icon">
+              <FileIcon ext={archivoAdjunto.name.split(".").pop()} />
+            </span>
 
-              <div className="ticket-form-group">
+            <span className="archivo-nombre">{archivoAdjunto.name}</span>
 
-                <label>
-                  Técnico
-                </label>
-
-                <select
-                  value={
-                    tecnicoSeleccionado
-                  }
-                  onChange={
-                    e =>
-                      setTecnicoSeleccionado(
-                        e.target.value
-                      )
-                  }
-                >
-
-                  <option value="">
-                    Seleccionar técnico
-                  </option>
-
-                  {tecnicos.map(
-                    tecnico => (
-
-                      <option
-                        key={
-                          tecnico.userId
-                        }
-                        value={
-                          tecnico.userId
-                        }
-                      >
-                        {tecnico.Nombre}
-                      </option>
-
-                    )
-                  )}
-
-                </select>
-
-              </div>
-
-
-              {errorAsignacion && (
-
-                <div className="ticket-modal-error">
-
-                  {errorAsignacion}
-
-                </div>
-
-              )}
-
-            </div>
-
-
-            <div className="ticket-modal-footer">
-
-              <button
-                className="ticket-modal-cancel"
-                onClick={
-                  cerrarModalAsignar
-                }
-                disabled={
-                  procesando
-                }
-              >
-                Cancelar
-              </button>
-
-
-              <button
-                className="ticket-modal-confirm"
-                onClick={
-                  confirmarAsignacion
-                }
-                disabled={
-                  procesando
-                }
-              >
-
-                {procesando
-                  ? "Asignando..."
-                  : "Asignar"}
-
-              </button>
-
-            </div>
+            <button className="adjunto-remove-btn" onClick={clearAdjunto}>
+              <Icon name="x" size={14} sw={2} />
+            </button>
 
           </div>
 
+        )}
+
+        <div className="chat-input-row">
+
+          <input
+            value={nuevoMensaje}
+            onChange={e => setNuevoMensaje(e.target.value)}
+            placeholder="Escribe un mensaje..."
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                sendMessage()
+              }
+            }}
+          />
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={e => setArchivoAdjunto(e.target.files[0] || null)}
+            hidden
+          />
+
+          <button
+            className="clip-btn"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Icon name="clip" size={18} />
+          </button>
+
+          <button onClick={sendMessage}>Enviar</button>
+
         </div>
+
+      </div>
+
+
+      {/* MODAL GESTIONAR */}
+
+      {modal === "gestion" && (
+
+        <Modal
+          title={`${TITULOS[Number(estado)]} ticket`}
+          onClose={tryClose}
+          busy={busy}
+          footer={
+            <Footer
+              onCancel={tryClose}
+              onOk={confirmarGestion}
+              busy={busy}
+              okText="Confirmar"
+              busyText="Procesando..."
+            />
+          }
+        >
+
+          <div className="ticket-confirmation">
+            <strong>¿Confirmar gestión?</strong>
+            <span>Esta acción es irreversible</span>
+          </div>
+
+          {Number(estado) === 5 && (
+            <>
+              <Field label="Empresa">
+                <EmpresaSelect
+                  value={form.empresaId}
+                  onChange={empresaId => patchForm({ empresaId })}
+                  empresas={empresas}
+                />
+              </Field>
+
+              <Field label="Número de ticket">
+                <input
+                  type="text"
+                  value={form.nroTicket}
+                  onChange={e => patchForm({ nroTicket: e.target.value })}
+                  placeholder="Número de ticket"
+                />
+              </Field>
+            </>
+          )}
+
+          {Number(estado) === 6 && (
+            <>
+              <Field label="Resolución">
+                <textarea
+                  rows="5"
+                  value={form.resolucion}
+                  onChange={e => patchForm({ resolucion: e.target.value })}
+                  placeholder="Describe la resolución del ticket..."
+                />
+              </Field>
+
+              <Field label="Archivo">
+                <input
+                  type="file"
+                  onChange={e => patchForm({ archivo: e.target.files[0] || null })}
+                />
+
+                {form.archivo && (
+                  <span className="ticket-file-selected">{form.archivo.name}</span>
+                )}
+              </Field>
+            </>
+          )}
+
+          <Err msg={error} />
+
+        </Modal>
+
+      )}
+
+
+      {/* MODAL ASIGNAR */}
+
+      {modal === "asignar" && (
+
+        <Modal
+          title="Asignar ticket"
+          subtitle="Selecciona el técnico al que deseas asignar el ticket."
+          onClose={tryClose}
+          busy={busy}
+          footer={
+            <Footer
+              onCancel={tryClose}
+              onOk={confirmarAsignacion}
+              busy={busy}
+              okText="Asignar"
+              busyText="Asignando..."
+            />
+          }
+        >
+
+          <Field label="Técnico">
+            <select value={tecnico} onChange={e => setTecnico(e.target.value)}>
+              <option value="">Seleccionar técnico</option>
+
+              {tecnicos.map(t => (
+                <option key={t.userId} value={t.userId}>
+                  {t.Nombre}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Err msg={error} />
+
+        </Modal>
+
+      )}
+
+
+      {/* MODAL DERIVACIONES */}
+
+      {modal === "derivaciones" && (
+
+        <Modal
+          wide
+          title="Derivaciones"
+          subtitle={`${ticket.NroTicket} · ${ticket.tituloTicket}`}
+          onClose={tryClose}
+          busy={busy}
+        >
+
+          <Err msg={error} />
+
+          {!derivaciones.length && (
+            <p className="derivaciones-vacio">
+              Este ticket no tiene derivaciones.
+            </p>
+          )}
+
+          <ul className="derivaciones-lista">
+
+            {derivaciones.map(d => {
+
+              const enEdicion = editando === d.derivacionId
+              const fechaFin = formatearFecha(d["fechaFinalización"])
+              const setEdit = patch => setEditForm(f => ({ ...f, ...patch }))
+
+              return (
+
+                <li
+                  key={d.derivacionId}
+                  className="derivacion-item"
+                  style={{ borderLeftColor: d.color || "#999" }}
+                >
+
+                  <div className="derivacion-contenido">
+
+                    {enEdicion ? (
+
+                      <>
+
+                        <Field label="Empresa">
+                          <EmpresaSelect
+                            value={editForm.empresaId}
+                            onChange={empresaId => setEdit({ empresaId })}
+                            empresas={empresas}
+                          />
+                        </Field>
+
+                        <Field label="Número de ticket">
+                          <input
+                            type="text"
+                            value={editForm.nroTicket}
+                            onChange={e => setEdit({ nroTicket: e.target.value })}
+                          />
+                        </Field>
+
+                        <Field label="Comentario">
+                          <textarea
+                            rows="3"
+                            value={editForm.comentario}
+                            onChange={e => setEdit({ comentario: e.target.value })}
+                          />
+                        </Field>
+
+                        <div className="derivacion-edicion-botones">
+                          <Footer
+                            onCancel={() => { setEditando(null); setError("") }}
+                            onOk={() => guardarEdicion(d)}
+                            busy={busy}
+                            okText="Guardar"
+                            busyText="Guardando..."
+                          />
+                        </div>
+
+                      </>
+
+                    ) : (
+
+                      <>
+
+                        <div className="derivacion-titulo">
+
+                          <span
+                            className="derivacion-empresa"
+                            style={{ backgroundColor: d.color || "#999" }}
+                          >
+                            {d.nomEmpresa}
+                          </span>
+
+                          <strong>{d.nroTicket}</strong>
+
+                          <span
+                            className={`badge derivacion-estado ${
+                              d.derivacionFinalizada ? "finalizada" : "pendiente"
+                            }`}
+                          >
+                            {d.derivacionFinalizada ? "Finalizada" : "Pendiente"}
+                          </span>
+
+                        </div>
+
+                        <p className="derivacion-comentario">
+                          {d.comentario || "Sin comentario"}
+                        </p>
+
+                        <div className="derivacion-fechas">
+                          <span>
+                            Derivada: {formatearFecha(d.fechaDerivacion) || "—"}
+                          </span>
+
+                          {fechaFin && <span>Finalizada: {fechaFin}</span>}
+                        </div>
+
+                      </>
+
+                    )}
+
+                  </div>
+
+
+                  {puedeGestionar && !enEdicion && (
+
+                    <div className="derivacion-acciones">
+
+                      <IconButton
+                        label="Editar"
+                        icon="edit"
+                        disabled={busy}
+                        onClick={() => iniciarEdicion(d)}
+                      />
+
+                      <IconButton
+                        label="Borrar"
+                        icon="trash"
+                        variant="danger"
+                        disabled={busy}
+                        onClick={() => setConfirm({ tipo: "borrar", d })}
+                      />
+
+                      <IconButton
+                        label="Finalizar"
+                        icon="check"
+                        variant="success"
+                        disabled={busy || d.derivacionFinalizada}
+                        onClick={() => setConfirm({ tipo: "finalizar", d })}
+                      />
+
+                    </div>
+
+                  )}
+
+                </li>
+              )
+            })}
+
+          </ul>
+
+        </Modal>
+
+      )}
+
+
+      {/* CONFIRMACIÓN BORRAR / FINALIZAR DERIVACIÓN */}
+
+      {confirm && (
+
+        <Modal
+          top
+          title={confirm.tipo === "borrar" ? "Borrar derivación" : "Finalizar derivación"}
+          footer={
+            <Footer
+              onCancel={() => setConfirm(null)}
+              onOk={ejecutarConfirmacion}
+              busy={busy}
+              okText={confirm.tipo === "borrar" ? "Borrar" : "Finalizar"}
+              busyText="Procesando..."
+            />
+          }
+        >
+          <p>
+            ¿Seguro que deseas {confirm.tipo === "borrar" ? "borrar" : "finalizar"} la
+            derivación {confirm.d.nroTicket} de {confirm.d.nomEmpresa}?
+            {confirm.tipo === "borrar" && " Dejará de mostrarse."}
+          </p>
+        </Modal>
 
       )}
 
