@@ -37,3 +37,15 @@ def cambiar_contraseña():
 @auth_bp.route("/recuperar_contraseña", methods=['POST'])
 def recuperar_contraseña():
     return proxy_request(f"{AUTH_SERVICE}/auth/recuperar_contraseña")
+
+@auth_bp.route("/usuario", methods=['GET'])
+def buscar_usuario():
+    return proxy_request(f"{AUTH_SERVICE}/auth/usuario")
+
+@auth_bp.route("/usuario/<int:user_id>", methods=['PUT'])
+def modificar_usuario(user_id):
+    return proxy_request(f"{AUTH_SERVICE}/auth/usuario/{user_id}")
+
+@auth_bp.route("/roles", methods=['GET'])
+def obtener_roles():
+    return proxy_request(f"{AUTH_SERVICE}/auth/roles")

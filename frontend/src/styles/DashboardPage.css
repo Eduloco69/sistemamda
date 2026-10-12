@@ -1,0 +1,268 @@
+/* =========================================================
+   DashboardPage.css
+   Estilos propios del dashboard. Usa los tokens --adm-* que
+   define Admin.css, por eso la raíz de la página lleva la
+   clase adm-page. Todas las clases usan el prefijo dsh-.
+========================================================= */
+
+.dsh-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dsh-card-body {
+  padding: 20px;
+}
+
+.dsh-note {
+  margin: 0;
+  padding: 24px 20px;
+
+  color: var(--adm-muted);
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ESTADOS: BARRA DE DISTRIBUCIÓN
+========================================================= */
+
+.dsh-card-body--bar {
+  padding-bottom: 18px;
+}
+
+.dsh-bar {
+  display: flex;
+  gap: 2px;
+
+  height: 10px;
+  overflow: hidden;
+
+  border-radius: 5px;
+  background: var(--adm-line-soft);
+
+  /* Único movimiento de la página: la barra se despliega al cargar */
+  animation: dsh-reveal 0.6s ease-out;
+}
+
+.dsh-bar-seg {
+  min-width: 0;
+}
+
+@keyframes dsh-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+
+/* =========================================================
+   ESTADOS: CIFRAS
+========================================================= */
+
+.dsh-states {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+
+  border-top: 1px solid var(--adm-line-soft);
+}
+
+.dsh-state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 14px 20px 16px;
+  border-left: 1px solid var(--adm-line-soft);
+}
+
+.dsh-state:first-child {
+  border-left: none;
+}
+
+.dsh-state-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  color: var(--adm-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dsh-dot {
+  flex-shrink: 0;
+
+  width: 8px;
+  height: 8px;
+
+  border-radius: 2px;
+}
+
+.dsh-state-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  color: var(--adm-text);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.dsh-state-count small {
+  color: var(--adm-faint);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dsh-state.is-zero .dsh-state-count {
+  color: #a3aab6;
+}
+
+
+/* =========================================================
+   CATEGORÍAS + ACTIVIDAD
+========================================================= */
+
+.dsh-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.6fr) minmax(230px, 1fr);
+  gap: 16px;
+}
+
+.dsh-grid > .adm-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.dsh-today {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 22px 20px 20px;
+}
+
+.dsh-today-label {
+  color: var(--adm-muted);
+  font-size: 13px;
+}
+
+.dsh-today-value {
+  color: var(--adm-brand);
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.dsh-metrics {
+  margin: 0;
+  padding: 0 20px;
+  list-style: none;
+}
+
+.dsh-metrics li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 13px 0;
+  border-top: 1px solid var(--adm-line-soft);
+}
+
+.dsh-metrics span {
+  color: var(--adm-muted);
+  font-size: 13px;
+}
+
+.dsh-metrics strong {
+  color: var(--adm-text);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* =========================================================
+   GRÁFICOS
+========================================================= */
+
+.dsh-chart-scroll {
+  overflow-x: auto;
+}
+
+.dsh-chart {
+  min-width: 460px;
+  height: 260px;
+}
+
+.dsh-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  padding: 8px 12px;
+
+  border: 1px solid var(--adm-line);
+  border-radius: 6px;
+
+  background: var(--adm-surface);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+}
+
+.dsh-tooltip span {
+  color: var(--adm-muted);
+  font-size: 12px;
+}
+
+.dsh-tooltip strong {
+  color: var(--adm-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+  .dsh-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dsh-states {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dsh-state {
+    border-left: none;
+    border-top: 1px solid var(--adm-line-soft);
+  }
+
+  .dsh-state:nth-child(even) {
+    border-left: 1px solid var(--adm-line-soft);
+  }
+
+  .dsh-state:nth-child(-n + 2) {
+    border-top: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dsh-bar {
+    animation: none;
+  }
+}

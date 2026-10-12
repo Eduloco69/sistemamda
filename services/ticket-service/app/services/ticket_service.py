@@ -336,7 +336,7 @@ def ver_detalle_ticket_service(ticket_id, user_id, permisos):
             conn.close()
 
 def ver_dashboard_service():
-    sql_estado = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_estado] WHERE estadoTicketId not in (4,5,7)'
+    sql_estado = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_estado] WHERE estadoTicketId not in (2,6,8)'
     sql_hoy = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_hoy]'
     sql_30_dias = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_ultimos_30_dias]'
     sql_categoria = 'SELECT * FROM [MesaDeAyuda].[dbo].[v_tickets_por_categoria]'

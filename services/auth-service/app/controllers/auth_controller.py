@@ -62,3 +62,24 @@ def recuperar_contraseña_controller():
     r, s = recuperar_contraseña_service(mail)
 
     return jsonify(r), s
+
+def buscar_usuario_controller():
+    user_data = request.user
+    permisos = user_data.get('permisos', [])
+
+    rut = request.args.get('rut')
+    mail = request.args.get('mail')
+    r, s = buscar_usuario_service(rut, mail, permisos)
+    return jsonify(r), s
+
+def modificar_usuario_controller(user_id):
+    data = request.json
+    user_data = request.user
+    permisos = user_data.get('permisos', [])
+
+    r,s = modificar_usuario_service(user_id, data, permisos)
+    return jsonify(r), s
+
+def obtener_roles_controller():
+    r, s = obtener_roles_service()
+    return jsonify(r), s

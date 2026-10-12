@@ -42,3 +42,18 @@ def cambiar_contraseña():
 @auth_bp.route("/recuperar_contraseña", methods=['POST'])
 def recuperar_contraseña():
     return recuperar_contraseña_controller()
+
+@auth_bp.route("/usuario", methods=['GET'])
+@auth_required
+def buscar_usuario():
+    return buscar_usuario_controller()
+
+@auth_bp.route("/usuario/<int:user_id>", methods=['PUT'])
+@auth_required
+def modificar_usuario(user_id):
+    return modificar_usuario_controller(user_id)
+
+@auth_bp.route("/roles", methods=['GET'])
+@auth_required
+def obtener_roles():
+    return obtener_roles_controller()

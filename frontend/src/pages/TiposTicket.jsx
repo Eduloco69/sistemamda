@@ -1,21 +1,38 @@
 import { useEffect, useState } from "react"
 import api from "../services/api"
-import "../styles/TiposTicket.css"
+import "../styles/Admin.css"
+import {
+  BotonEditar,
+  Campo,
+  CampoColor,
+  Cargando,
+  COLOR_INICIAL,
+  contar,
+  EncabezadoPagina,
+  esColorValido,
+  Estado,
+  Interruptor,
+  ListaInterruptores,
+  Marca,
+  Modal,
+  obtenerMensajeError,
+  SiNo,
+  Tarjeta,
+  Vacio
+} from "../components/AdminUI"
 
 export default function TiposTicket() {
   const [tiposTicket, setTiposTicket] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+
   const [modal, setModal] = useState(null)
+  const [errorForm, setErrorForm] = useState("")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     cargarTiposTicket()
   }, [])
-
-  // =========================================================
-  // OBTENER TIPOS DE TICKET
-  // =========================================================
 
   async function cargarTiposTicket() {
     try {
@@ -29,636 +46,321 @@ export default function TiposTicket() {
       console.error(error)
 
       setError(
-        error.response?.data?.Mensaje ||
-        "No fue posible obtener los tipos de ticket"
+        obtenerMensajeError(
+          error,
+          "No fue posible obtener los tipos de ticket."
+        )
       )
     } finally {
       setLoading(false)
     }
   }
 
-  // =========================================================
-  // ABRIR MODAL CREAR
-  // =========================================================
-
   function abrirCrear() {
+    setErrorForm("")
+
     setModal({
       modo: "crear",
       tipoTicketId: null,
       tipoTicket: "",
-      color: "#2563eb",
+      color: COLOR_INICIAL,
       adminflg: false,
       activo: true
     })
   }
 
-  // =========================================================
-  // ABRIR MODAL EDITAR
-  // =========================================================
-
   function abrirEditar(tipo) {
+    setErrorForm("")
+
     setModal({
       modo: "editar",
       tipoTicketId: tipo.tipoTicketId,
       tipoTicket: tipo.tipoTicket,
-      color: tipo.color || "#2563eb",
+      color: tipo.color || COLOR_INICIAL,
       adminflg: Boolean(tipo.adminflg),
       activo: Boolean(tipo.activo)
     })
   }
 
-  // =========================================================
-  // CERRAR MODAL
-  // =========================================================
-
   function cerrarModal() {
-    if (saving)
-      return
+    if (saving) return
 
     setModal(null)
+    setErrorForm("")
   }
 
-  // =========================================================
-  // CAMBIAR CAMPOS
-  // =========================================================
-
-  function handleChange(e) {
-    const {
-      name,
-      value,
-      type,
-      checked
-    } = e.target
-
+  function cambiar(campo, valor) {
     setModal(prev => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value
+      [campo]: valor
     }))
   }
 
-  // =========================================================
-  // CREAR TIPO DE TICKET
-  // =========================================================
-
-  async function crearTipoTicket() {
-    if (!modal)
-      return
-
-    if (!modal.tipoTicket.trim()) {
-      alert("El nombre del tipo de ticket es obligatorio")
-      return
-    }
-
-    if (!modal.color) {
-      alert("El color del tipo de ticket es obligatorio")
-      return
-    }
-
-    try {
-      setSaving(true)
-
-      const data = {
-        tipoTicket: modal.tipoTicket.trim(),
-        color: modal.color,
-        adminflg: modal.adminflg ? 1 : 0
-      }
-
-      const response = await api.post(
-        "/ticket/tipoticket",
-        data
-      )
-
-      const tipoTicketId =
-        response.data?.TipoTicketId
-
-      const nuevoTipo = {
-        tipoTicketId,
-        tipoTicket: data.tipoTicket,
-        color: data.color,
-        adminflg: data.adminflg === 1,
-        activo: true
-      }
-
-      setTiposTicket(prev => [
-        ...prev,
-        nuevoTipo
-      ])
-
-      setModal(null)
-    } catch (error) {
-      console.error(error)
-
-      alert(
-        error.response?.data?.Mensaje ||
-        error.response?.data?.Error ||
-        "No fue posible crear el tipo de ticket"
-      )
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // =========================================================
-  // MODIFICAR TIPO DE TICKET
+  // CREAR / MODIFICAR TIPO DE TICKET
   // =========================================================
 
   async function guardarTipoTicket() {
-    if (!modal)
-      return
+    if (!modal) return
 
-    if (!modal.tipoTicket.trim()) {
-      alert("El nombre del tipo de ticket es obligatorio")
+    const tipoTicket = modal.tipoTicket.trim()
+
+    if (!tipoTicket) {
+      setErrorForm("Ingresa el nombre del tipo de ticket.")
       return
     }
 
-    if (!modal.color) {
-      alert("El color del tipo de ticket es obligatorio")
+    if (!esColorValido(modal.color)) {
+      setErrorForm("Ingresa un color válido con el formato #RRGGBB.")
       return
     }
 
     try {
       setSaving(true)
+      setErrorForm("")
 
-      const data = {
-        tipoTicket: modal.tipoTicket.trim(),
-        color: modal.color,
-        activo: modal.activo ? 1 : 0,
-        adminflg: modal.adminflg ? 1 : 0
-      }
+      const adminflg = modal.adminflg ? 1 : 0
 
-      await api.put(
-        `/ticket/tipoticket/${modal.tipoTicketId}`,
-        data
-      )
+      if (modal.modo === "crear") {
+        const response = await api.post("/ticket/tipoticket", {
+          tipoTicket,
+          color: modal.color,
+          adminflg
+        })
 
-      setTiposTicket(prev =>
-        prev.map(tipo =>
-          tipo.tipoTicketId === modal.tipoTicketId
-            ? {
-                ...tipo,
-                tipoTicket: data.tipoTicket,
-                color: data.color,
-                activo: data.activo === 1,
-                adminflg: data.adminflg === 1
-              }
-            : tipo
+        setTiposTicket(prev => [
+          ...prev,
+          {
+            tipoTicketId: response.data?.TipoTicketId,
+            tipoTicket,
+            color: modal.color,
+            adminflg: adminflg === 1,
+            activo: true
+          }
+        ])
+      } else {
+        const activo = modal.activo ? 1 : 0
+
+        await api.put(`/ticket/tipoticket/${modal.tipoTicketId}`, {
+          tipoTicket,
+          color: modal.color,
+          activo,
+          adminflg
+        })
+
+        setTiposTicket(prev =>
+          prev.map(tipo =>
+            tipo.tipoTicketId === modal.tipoTicketId
+              ? {
+                  ...tipo,
+                  tipoTicket,
+                  color: modal.color,
+                  activo: activo === 1,
+                  adminflg: adminflg === 1
+                }
+              : tipo
+          )
         )
-      )
+      }
 
       setModal(null)
     } catch (error) {
       console.error(error)
 
-      alert(
-        error.response?.data?.Mensaje ||
-        error.response?.data?.Error ||
-        "No fue posible actualizar el tipo de ticket"
+      setErrorForm(
+        obtenerMensajeError(
+          error,
+          modal.modo === "crear"
+            ? "No fue posible crear el tipo de ticket."
+            : "No fue posible actualizar el tipo de ticket."
+        )
       )
     } finally {
       setSaving(false)
     }
   }
 
-  // =========================================================
-  // LOADING
-  // =========================================================
-
-  if (loading) {
-    return (
-      <div className="tipos-ticket-page">
-        <div className="tipos-ticket-loading">
-          <div className="loading-spinner"></div>
-
-          <span>
-            Cargando tipos de ticket...
-          </span>
-        </div>
-      </div>
-    )
-  }
 
   // =========================================================
   // RENDER
   // =========================================================
 
+  const esCrear = modal?.modo === "crear"
+
   return (
-    <div className="tipos-ticket-page">
+    <div className="adm-page">
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      <EncabezadoPagina
+        titulo="Tipos de ticket"
+        descripcion="Administra los tipos de ticket disponibles en el sistema."
+        accion="Nuevo tipo de ticket"
+        onAccion={abrirCrear}
+      />
 
-      <div className="tipos-ticket-header">
+      <Tarjeta
+        titulo="Tipos de ticket registrados"
+        resumen={
+          loading || error
+            ? null
+            : contar(
+                tiposTicket.length,
+                "tipo de ticket",
+                "tipos de ticket"
+              )
+        }
+      >
 
-        <div>
+        {loading ? (
 
-          <h1>
-            Tipos de ticket
-          </h1>
+          <Cargando texto="Cargando tipos de ticket..." />
 
-        </div>
+        ) : error && tiposTicket.length === 0 ? (
 
-        <button
-          className="action-button primary"
-          onClick={abrirCrear}
-        >
-          + Nuevo tipo de ticket
-        </button>
+          <Vacio
+            icono="alerta"
+            titulo="No fue posible cargar los tipos de ticket"
+            texto={error}
+            accion="Reintentar"
+            onAccion={cargarTiposTicket}
+          />
 
-      </div>
+        ) : tiposTicket.length === 0 ? (
 
-      {/* =====================================================
-          ERROR
-      ===================================================== */}
+          <Vacio
+            icono="lista"
+            titulo="No hay tipos de ticket registrados"
+            texto="Crea el primer tipo de ticket para comenzar a utilizar esta sección."
+            accion="Crear tipo de ticket"
+            onAccion={abrirCrear}
+          />
 
-      {error && (
-        <div className="tipos-ticket-error">
-          {error}
-        </div>
-      )}
+        ) : (
 
-      {/* =====================================================
-          TABLA
-      ===================================================== */}
+          <div className="adm-table-wrap">
+            <table className="adm-table">
 
-      <div className="tipos-ticket-card">
-
-        <div className="tipos-ticket-table-wrapper">
-
-          <table className="tipos-ticket-table">
-
-            <thead>
-
-              <tr>
-
-                <th>
-                  Tipo de ticket
-                </th>
-
-                <th>
-                  Color
-                </th>
-
-                <th>
-                  Administración
-                </th>
-
-                <th>
-                  Estado
-                </th>
-
-                <th>
-                  Acciones
-                </th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {tiposTicket.length === 0 ? (
-
+              <thead>
                 <tr>
-
-                  <td
-                    colSpan="5"
-                    className="empty-state"
-                  >
-                    No existen tipos de ticket configurados.
-                  </td>
-
+                  <th>Tipo de ticket</th>
+                  <th>Color</th>
+                  <th>Administración</th>
+                  <th>Estado</th>
+                  <th className="adm-col-action">Acción</th>
                 </tr>
+              </thead>
 
-              ) : (
-
-                tiposTicket.map(tipo => (
-
+              <tbody>
+                {tiposTicket.map(tipo => (
                   <tr
                     key={tipo.tipoTicketId}
-                    className="tipo-ticket-row"
+                    className="adm-row"
                   >
-
-                    {/* TIPO DE TICKET */}
-
                     <td>
-
-                      <div className="tipo-ticket-name">
-
-                        <span
-                          className="tipo-ticket-color-dot"
-                          style={{
-                            backgroundColor:
-                              tipo.color
-                          }}
-                        />
-
-                        <span>
-                          {tipo.tipoTicket}
-                        </span>
-
+                      <div className="adm-name">
+                        <Marca color={tipo.color} />
+                        <span>{tipo.tipoTicket}</span>
                       </div>
-
                     </td>
-
-                    {/* COLOR */}
 
                     <td>
-
-                      <div className="color-preview">
-
-                        <span
-                          className="color-box"
-                          style={{
-                            backgroundColor:
-                              tipo.color
-                          }}
-                        />
-
-                        <span>
-                          {tipo.color}
-                        </span>
-
-                      </div>
-
+                      <span className="adm-hex">{tipo.color}</span>
                     </td>
-
-                    {/* ADMIN */}
 
                     <td>
-
-                      <span
-                        className={
-                          tipo.adminflg
-                            ? "admin-badge yes"
-                            : "admin-badge no"
-                        }
-                      >
-                        {tipo.adminflg
-                          ? "Sí"
-                          : "No"}
-                      </span>
-
+                      <SiNo valor={tipo.adminflg} />
                     </td>
-
-                    {/* ESTADO */}
 
                     <td>
-
-                      <span
-                        className={
-                          tipo.activo
-                            ? "status-badge active"
-                            : "status-badge inactive"
-                        }
-                      >
-                        {tipo.activo
-                          ? "Activo"
-                          : "Inactivo"}
-                      </span>
-
+                      <Estado activo={tipo.activo} />
                     </td>
 
-                    {/* ACCIONES */}
-
-                    <td>
-
-                      <div className="tipo-ticket-actions">
-
-                        <button
-                          className="action-button primary"
-                          onClick={() =>
-                            abrirEditar(tipo)
-                          }
-                        >
-                          Editar
-                        </button>
-
-                      </div>
-
+                    <td className="adm-col-action">
+                      <BotonEditar
+                        titulo={`Editar ${tipo.tipoTicket}`}
+                        onClick={() => abrirEditar(tipo)}
+                      />
                     </td>
-
                   </tr>
+                ))}
+              </tbody>
 
-                ))
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-      {/* =====================================================
-          MODAL
-      ===================================================== */}
-
-      {modal && (
-
-        <div
-          className="modal-overlay"
-          onMouseDown={cerrarModal}
-        >
-
-          <div
-            className="tipo-ticket-modal"
-            onMouseDown={e =>
-              e.stopPropagation()
-            }
-          >
-
-            {/* HEADER */}
-
-            <div className="modal-header">
-
-              <div>
-
-                <h2>
-                  {modal.modo === "crear"
-                    ? "Nuevo tipo de ticket"
-                    : "Editar tipo de ticket"}
-                </h2>
-
-              </div>
-
-              <button
-                className="modal-close"
-                onClick={cerrarModal}
-                disabled={saving}
-              >
-                ×
-              </button>
-
-            </div>
-
-            {/* BODY */}
-
-            <div className="modal-body">
-
-              {/* NOMBRE */}
-
-              <div className="modal-form-group">
-
-                <label>
-                  Nombre del tipo de ticket
-                </label>
-
-                <input
-                  type="text"
-                  name="tipoTicket"
-                  value={
-                    modal.tipoTicket
-                  }
-                  onChange={handleChange}
-                  placeholder="Ej: Incidencia"
-                  maxLength={100}
-                />
-
-              </div>
-
-              {/* COLOR */}
-
-              <div className="modal-form-group">
-
-                <label>
-                  Color
-                </label>
-
-                <div className="color-input-wrapper">
-
-                  <input
-                    type="color"
-                    name="color"
-                    value={
-                      modal.color ||
-                      "#2563eb"
-                    }
-                    onChange={handleChange}
-                  />
-
-                  <input
-                    type="text"
-                    name="color"
-                    value={
-                      modal.color
-                    }
-                    onChange={handleChange}
-                    placeholder="#2563eb"
-                  />
-
-                </div>
-
-              </div>
-
-              {/* ADMIN */}
-
-              <div className="modal-options">
-
-                <label className="switch-option">
-
-                  <input
-                    type="checkbox"
-                    name="adminflg"
-                    checked={
-                      modal.adminflg
-                    }
-                    onChange={handleChange}
-                  />
-
-                  <span className="switch"></span>
-
-                  <span>
-
-                    <strong>
-                      Tipo administrativo
-                    </strong>
-
-                    <small>
-                      Indica si el tipo de ticket
-                      corresponde a administración.
-                    </small>
-
-                  </span>
-
-                </label>
-
-              </div>
-
-              {/* ESTADO */}
-
-              {modal.modo === "editar" && (
-
-                <div className="modal-options">
-
-                  <label className="switch-option">
-
-                    <input
-                      type="checkbox"
-                      name="activo"
-                      checked={
-                        modal.activo
-                      }
-                      onChange={handleChange}
-                    />
-
-                    <span className="switch"></span>
-
-                    <span>
-
-                      <strong>
-                        Tipo de ticket activo
-                      </strong>
-
-                    </span>
-
-                  </label>
-
-                </div>
-
-              )}
-
-            </div>
-
-            {/* FOOTER */}
-
-            <div className="modal-footer">
-
-              <button
-                className="modal-cancel"
-                onClick={cerrarModal}
-                disabled={saving}
-              >
-                Cancelar
-              </button>
-
-              <button
-                className="modal-save"
-                onClick={
-                  modal.modo === "crear"
-                    ? crearTipoTicket
-                    : guardarTipoTicket
-                }
-                disabled={saving}
-              >
-                {saving
-                  ? "Guardando..."
-                  : modal.modo === "crear"
-                    ? "Crear tipo de ticket"
-                    : "Guardar cambios"}
-              </button>
-
-            </div>
-
+            </table>
           </div>
 
-        </div>
+        )}
 
+      </Tarjeta>
+
+      {modal && (
+        <Modal
+          titulo={
+            esCrear
+              ? "Nuevo tipo de ticket"
+              : "Editar tipo de ticket"
+          }
+          descripcion={
+            esCrear
+              ? "Ingresa la información del nuevo tipo de ticket."
+              : "Modifica la información del tipo de ticket."
+          }
+          onCerrar={cerrarModal}
+          onEnviar={guardarTipoTicket}
+          guardando={saving}
+          error={errorForm}
+          textoEnviar={
+            esCrear
+              ? "Crear tipo de ticket"
+              : "Guardar cambios"
+          }
+        >
+
+          <Campo
+            etiqueta="Nombre del tipo de ticket"
+            id="tipo-ticket-nombre"
+          >
+            <input
+              id="tipo-ticket-nombre"
+              type="text"
+              value={modal.tipoTicket}
+              onChange={e => cambiar("tipoTicket", e.target.value)}
+              placeholder="Ej: Incidencia"
+              maxLength={40}
+              disabled={saving}
+              autoFocus
+            />
+          </Campo>
+
+          <Campo etiqueta="Color" id="tipo-ticket-color">
+            <CampoColor
+              id="tipo-ticket-color"
+              valor={modal.color}
+              onChange={valor => cambiar("color", valor)}
+              deshabilitado={saving}
+            />
+          </Campo>
+
+          <ListaInterruptores>
+            <Interruptor
+              titulo="Tipo administrativo"
+              descripcion="Indica si el tipo de ticket corresponde a administración."
+              checked={modal.adminflg}
+              onChange={valor => cambiar("adminflg", valor)}
+              deshabilitado={saving}
+            />
+
+            {!esCrear && (
+              <Interruptor
+                titulo="Tipo de ticket activo"
+                descripcion="Define si el tipo de ticket estará disponible para ser utilizado."
+                checked={modal.activo}
+                onChange={valor => cambiar("activo", valor)}
+                deshabilitado={saving}
+              />
+            )}
+          </ListaInterruptores>
+
+        </Modal>
       )}
 
     </div>

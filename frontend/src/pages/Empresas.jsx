@@ -1,18 +1,34 @@
 import { useEffect, useState } from "react"
 import api from "../services/api"
-import "../styles/Empresas.css"
+import "../styles/Admin.css"
+import {
+  BotonEditar,
+  Campo,
+  CampoColor,
+  Cargando,
+  COLOR_INICIAL,
+  contar,
+  EncabezadoPagina,
+  esColorValido,
+  Estado,
+  Interruptor,
+  ListaInterruptores,
+  Marca,
+  Modal,
+  obtenerMensajeError,
+  Tarjeta,
+  Vacio
+} from "../components/AdminUI"
 
 export default function Empresas() {
 
   const [empresas, setEmpresas] = useState([])
-
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   const [modal, setModal] = useState(null)
-
+  const [errorForm, setErrorForm] = useState("")
   const [saving, setSaving] = useState(false)
-
 
   useEffect(() => {
     cargarEmpresas()
@@ -24,356 +40,147 @@ export default function Empresas() {
   // =========================================================
 
   async function cargarEmpresas() {
-
     try {
-
       setLoading(true)
       setError("")
 
       const response = await api.get("/empresa")
 
-      setEmpresas(
-        response.data.Empresas || []
-      )
-
+      setEmpresas(response.data.Empresas || [])
     } catch (error) {
-
       console.error(error)
 
       setError(
-        error.response?.data?.Mensaje ||
-        "No fue posible obtener las empresas"
+        obtenerMensajeError(
+          error,
+          "No fue posible obtener las empresas."
+        )
       )
-
     } finally {
-
       setLoading(false)
-
     }
-
   }
 
 
   // =========================================================
-  // ABRIR MODAL CREAR
+  // MODAL
   // =========================================================
 
   function abrirCrear() {
+    setErrorForm("")
 
     setModal({
-
       modo: "crear",
-
       empresaId: null,
-
       nomEmpresa: "",
-
-      color: "#2563eb",
-
+      color: COLOR_INICIAL,
       activo: true
-
     })
-
   }
-
-
-  // =========================================================
-  // ABRIR MODAL EDITAR
-  // =========================================================
 
   function abrirEditar(empresa) {
+    setErrorForm("")
 
     setModal({
-
       modo: "editar",
-
       empresaId: empresa.empresaId,
-
       nomEmpresa: empresa.nomEmpresa,
-
-      color: empresa.color || "#2563eb",
-
-      activo: empresa.activo
-
+      color: empresa.color || COLOR_INICIAL,
+      activo: Boolean(empresa.activo)
     })
-
   }
-
-
-  // =========================================================
-  // CERRAR MODAL
-  // =========================================================
 
   function cerrarModal() {
-
-    if (saving)
-      return
+    if (saving) return
 
     setModal(null)
-
+    setErrorForm("")
   }
 
-
-  // =========================================================
-  // CAMBIAR CAMPOS
-  // =========================================================
-
-  function handleChange(e) {
-
-    const {
-      name,
-      value,
-      type,
-      checked
-    } = e.target
-
+  function cambiar(campo, valor) {
     setModal(prev => ({
-
       ...prev,
-
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value
-
+      [campo]: valor
     }))
-
   }
 
 
   // =========================================================
-  // CREAR EMPRESA
-  // =========================================================
-
-  async function crearEmpresa() {
-
-    if (!modal)
-      return
-
-    if (!modal.nomEmpresa.trim()) {
-
-      alert(
-        "El nombre de la empresa es obligatorio"
-      )
-
-      return
-
-    }
-
-    if (!modal.color) {
-
-      alert(
-        "El color de la empresa es obligatorio"
-      )
-
-      return
-
-    }
-
-
-    try {
-
-      setSaving(true)
-
-      const data = {
-
-        nomEmpresa:
-          modal.nomEmpresa.trim(),
-
-        color:
-          modal.color
-
-      }
-
-
-      const response =
-        await api.post(
-          "/empresa",
-          data
-        )
-
-
-      const empresaId =
-        response.data?.EmpresaId
-
-
-      const nuevaEmpresa = {
-
-        empresaId,
-
-        nomEmpresa:
-          data.nomEmpresa,
-
-        color:
-          data.color,
-
-        activo: true
-
-      }
-
-
-      setEmpresas(prev => [
-
-        ...prev,
-
-        nuevaEmpresa
-
-      ])
-
-
-      setModal(null)
-
-
-    } catch (error) {
-
-      console.error(error)
-
-      alert(
-        error.response?.data?.Mensaje ||
-        error.response?.data?.Error ||
-        "No fue posible crear la empresa"
-      )
-
-    } finally {
-
-      setSaving(false)
-
-    }
-
-  }
-
-
-  // =========================================================
-  // MODIFICAR EMPRESA
+  // CREAR / MODIFICAR EMPRESA
   // =========================================================
 
   async function guardarEmpresa() {
+    if (!modal) return
 
-    if (!modal)
+    const nomEmpresa = modal.nomEmpresa.trim()
+
+    if (!nomEmpresa) {
+      setErrorForm("Ingresa el nombre de la empresa.")
       return
-
-    if (!modal.nomEmpresa.trim()) {
-
-      alert(
-        "El nombre de la empresa es obligatorio"
-      )
-
-      return
-
     }
 
-    if (!modal.color) {
-
-      alert(
-        "El color de la empresa es obligatorio"
-      )
-
+    if (!esColorValido(modal.color)) {
+      setErrorForm("Ingresa un color válido con el formato #RRGGBB.")
       return
-
     }
-
 
     try {
-
       setSaving(true)
+      setErrorForm("")
 
-      const data = {
+      if (modal.modo === "crear") {
+        const response = await api.post("/empresa", {
+          nomEmpresa,
+          color: modal.color
+        })
 
-        nomEmpresa:
-          modal.nomEmpresa.trim(),
+        setEmpresas(prev => [
+          ...prev,
+          {
+            empresaId: response.data?.EmpresaId,
+            nomEmpresa,
+            color: modal.color,
+            activo: true
+          }
+        ])
+      } else {
+        const activo = modal.activo ? 1 : 0
 
-        color:
-          modal.color,
+        await api.put(`/empresa/${modal.empresaId}`, {
+          nomEmpresa,
+          color: modal.color,
+          activo
+        })
 
-        activo:
-          modal.activo
-            ? 1
-            : 0
-
+        setEmpresas(prev =>
+          prev.map(empresa =>
+            empresa.empresaId === modal.empresaId
+              ? {
+                  ...empresa,
+                  nomEmpresa,
+                  color: modal.color,
+                  activo: activo === 1
+                }
+              : empresa
+          )
+        )
       }
 
-
-      await api.put(
-        `/empresa/${modal.empresaId}`,
-        data
-      )
-
-
-      setEmpresas(prev =>
-
-        prev.map(empresa =>
-
-          empresa.empresaId ===
-          modal.empresaId
-
-            ? {
-
-                ...empresa,
-
-                nomEmpresa:
-                  data.nomEmpresa,
-
-                color:
-                  data.color,
-
-                activo:
-                  data.activo === 1
-
-              }
-
-            : empresa
-
-        )
-
-      )
-
-
       setModal(null)
-
-
     } catch (error) {
-
       console.error(error)
 
-      alert(
-        error.response?.data?.Mensaje ||
-        error.response?.data?.Error ||
-        "No fue posible actualizar la empresa"
+      setErrorForm(
+        obtenerMensajeError(
+          error,
+          modal.modo === "crear"
+            ? "No fue posible crear la empresa."
+            : "No fue posible actualizar la empresa."
+        )
       )
-
     } finally {
-
       setSaving(false)
-
     }
-
-  }
-
-
-  // =========================================================
-  // LOADING
-  // =========================================================
-
-  if (loading) {
-
-    return (
-
-      <div className="empresas-page">
-
-        <div className="empresas-loading">
-
-          <div className="loading-spinner"></div>
-
-          <span>
-            Cargando empresas...
-          </span>
-
-        </div>
-
-      </div>
-
-    )
-
   }
 
 
@@ -381,410 +188,161 @@ export default function Empresas() {
   // RENDER
   // =========================================================
 
+  const esCrear = modal?.modo === "crear"
+
   return (
+    <div className="adm-page">
 
-    <div className="empresas-page">
+      <EncabezadoPagina
+        titulo="Empresas"
+        descripcion="Administra las empresas disponibles en el sistema."
+        accion="Nueva empresa"
+        onAccion={abrirCrear}
+      />
 
+      <Tarjeta
+        titulo="Empresas registradas"
+        resumen={
+          loading || error
+            ? null
+            : contar(empresas.length, "empresa", "empresas")
+        }
+      >
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+        {loading ? (
 
-      <div className="empresas-header">
+          <Cargando texto="Cargando empresas..." />
 
-        <div>
+        ) : error && empresas.length === 0 ? (
 
-          <h1>
-            Empresas
-          </h1>
+          <Vacio
+            icono="alerta"
+            titulo="No fue posible cargar las empresas"
+            texto={error}
+            accion="Reintentar"
+            onAccion={cargarEmpresas}
+          />
 
-        </div>
+        ) : empresas.length === 0 ? (
 
+          <Vacio
+            icono="edificio"
+            titulo="No hay empresas registradas"
+            texto="Crea la primera empresa para comenzar a utilizar esta sección."
+            accion="Crear empresa"
+            onAccion={abrirCrear}
+          />
 
-        <button
-          className="action-button primary"
-          onClick={abrirCrear}
-        >
+        ) : (
 
-          + Nueva empresa
+          <div className="adm-table-wrap">
+            <table className="adm-table">
 
-        </button>
-
-      </div>
-
-
-      {/* =====================================================
-          ERROR
-      ===================================================== */}
-
-      {error && (
-
-        <div className="empresas-error">
-
-          {error}
-
-        </div>
-
-      )}
-
-
-      {/* =====================================================
-          TABLA
-      ===================================================== */}
-
-      <div className="empresas-card">
-
-        <div className="empresas-table-wrapper">
-
-          <table className="empresas-table">
-
-            <thead>
-
-              <tr>
-
-                <th>
-                  Empresa
-                </th>
-
-                <th>
-                  Color
-                </th>
-
-                <th>
-                  Estado
-                </th>
-
-                <th>
-                  Acciones
-                </th>
-
-              </tr>
-
-            </thead>
-
-
-            <tbody>
-
-              {empresas.length === 0 ? (
-
+              <thead>
                 <tr>
-
-                  <td
-                    colSpan="4"
-                    className="empty-state"
-                  >
-
-                    No existen empresas configuradas.
-
-                  </td>
-
+                  <th>Empresa</th>
+                  <th>Color</th>
+                  <th>Estado</th>
+                  <th className="adm-col-action">Acción</th>
                 </tr>
+              </thead>
 
-              ) : (
-
-                empresas.map(empresa => (
-
+              <tbody>
+                {empresas.map(empresa => (
                   <tr
                     key={empresa.empresaId}
-                    className="empresa-row"
+                    className="adm-row"
                   >
-
-                    {/* EMPRESA */}
-
                     <td>
-
-                      <div className="empresa-name">
-
-                        <span
-                          className="empresa-color-dot"
-                          style={{
-                            backgroundColor:
-                              empresa.color
-                          }}
-                        />
-
-                        <span>
-                          {empresa.nomEmpresa}
-                        </span>
-
+                      <div className="adm-name">
+                        <Marca color={empresa.color} />
+                        <span>{empresa.nomEmpresa}</span>
                       </div>
-
                     </td>
 
-
-                    {/* COLOR */}
-
                     <td>
-
-                      <div className="color-preview">
-
-                        <span
-                          className="color-box"
-                          style={{
-                            backgroundColor:
-                              empresa.color
-                          }}
-                        />
-
-                        <span>
-                          {empresa.color}
-                        </span>
-
-                      </div>
-
-                    </td>
-
-
-                    {/* ESTADO */}
-
-                    <td>
-
-                      <span
-                        className={
-                          empresa.activo
-                            ? "status-badge active"
-                            : "status-badge inactive"
-                        }
-                      >
-
-                        {empresa.activo
-                          ? "Activa"
-                          : "Inactiva"}
-
+                      <span className="adm-hex">
+                        {empresa.color}
                       </span>
-
                     </td>
-
-
-                    {/* ACCIONES */}
 
                     <td>
-
-                      <div className="empresa-actions">
-
-                        <button
-                          className="action-button primary"
-                          onClick={() =>
-                            abrirEditar(empresa)
-                          }
-                        >
-
-                          Editar
-
-                        </button>
-
-                      </div>
-
+                      <Estado
+                        activo={empresa.activo}
+                        activoTexto="Activa"
+                        inactivoTexto="Inactiva"
+                      />
                     </td>
 
+                    <td className="adm-col-action">
+                      <BotonEditar
+                        titulo={`Editar ${empresa.nomEmpresa}`}
+                        onClick={() => abrirEditar(empresa)}
+                      />
+                    </td>
                   </tr>
+                ))}
+              </tbody>
 
-                ))
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-
-      {/* =====================================================
-          MODAL
-      ===================================================== */}
-
-      {modal && (
-
-        <div
-          className="modal-overlay"
-          onMouseDown={cerrarModal}
-        >
-
-          <div
-            className="empresa-modal"
-            onMouseDown={e =>
-              e.stopPropagation()
-            }
-          >
-
-
-            {/* HEADER */}
-
-            <div className="modal-header">
-
-              <div>
-
-                <h2>
-
-                  {modal.modo === "crear"
-                    ? "Nueva empresa"
-                    : "Editar empresa"}
-
-                </h2>
-
-              </div>
-
-
-              <button
-                className="modal-close"
-                onClick={cerrarModal}
-                disabled={saving}
-              >
-
-                ×
-
-              </button>
-
-            </div>
-
-
-            {/* BODY */}
-
-            <div className="modal-body">
-
-
-              {/* NOMBRE */}
-
-              <div className="modal-form-group">
-
-                <label>
-                  Nombre de la empresa
-                </label>
-
-                <input
-                  type="text"
-                  name="nomEmpresa"
-                  value={
-                    modal.nomEmpresa
-                  }
-                  onChange={handleChange}
-                  placeholder="Ej: Empresa ABC"
-                  maxLength={100}
-                />
-
-              </div>
-
-
-              {/* COLOR */}
-
-              <div className="modal-form-group">
-
-                <label>
-                  Color
-                </label>
-
-                <div className="color-input-wrapper">
-
-                  <input
-                    type="color"
-                    name="color"
-                    value={
-                      modal.color ||
-                      "#2563eb"
-                    }
-                    onChange={handleChange}
-                  />
-
-                  <input
-                    type="text"
-                    name="color"
-                    value={
-                      modal.color
-                    }
-                    onChange={handleChange}
-                    placeholder="#2563eb"
-                  />
-
-                </div>
-
-              </div>
-
-
-              {/* ESTADO */}
-
-              {modal.modo === "editar" && (
-
-                <div className="modal-options">
-
-                  <label className="switch-option">
-
-                    <input
-                      type="checkbox"
-                      name="activo"
-                      checked={
-                        modal.activo
-                      }
-                      onChange={handleChange}
-                    />
-
-                    <span className="switch"></span>
-
-                    <span>
-
-                      <strong>
-                        Empresa activa
-                      </strong>
-
-                    </span>
-
-                  </label>
-
-                </div>
-
-              )}
-
-            </div>
-
-
-            {/* FOOTER */}
-
-            <div className="modal-footer">
-
-              <button
-                className="modal-cancel"
-                onClick={cerrarModal}
-                disabled={saving}
-              >
-
-                Cancelar
-
-              </button>
-
-
-              <button
-                className="modal-save"
-                onClick={
-                  modal.modo === "crear"
-                    ? crearEmpresa
-                    : guardarEmpresa
-                }
-                disabled={saving}
-              >
-
-                {saving
-
-                  ? "Guardando..."
-
-                  : modal.modo === "crear"
-                    ? "Crear empresa"
-                    : "Guardar cambios"}
-
-              </button>
-
-            </div>
-
-
+            </table>
           </div>
 
-        </div>
+        )}
 
+      </Tarjeta>
+
+      {modal && (
+        <Modal
+          titulo={esCrear ? "Nueva empresa" : "Editar empresa"}
+          descripcion={
+            esCrear
+              ? "Ingresa la información de la nueva empresa."
+              : "Modifica la información de la empresa."
+          }
+          onCerrar={cerrarModal}
+          onEnviar={guardarEmpresa}
+          guardando={saving}
+          error={errorForm}
+          textoEnviar={esCrear ? "Crear empresa" : "Guardar cambios"}
+        >
+
+          <Campo etiqueta="Nombre de la empresa" id="empresa-nombre">
+            <input
+              id="empresa-nombre"
+              type="text"
+              value={modal.nomEmpresa}
+              onChange={e => cambiar("nomEmpresa", e.target.value)}
+              placeholder="Ej: Empresa ABC"
+              maxLength={100}
+              disabled={saving}
+              autoFocus
+            />
+          </Campo>
+
+          <Campo etiqueta="Color" id="empresa-color">
+            <CampoColor
+              id="empresa-color"
+              valor={modal.color}
+              onChange={valor => cambiar("color", valor)}
+              deshabilitado={saving}
+            />
+          </Campo>
+
+          {!esCrear && (
+            <ListaInterruptores>
+              <Interruptor
+                titulo="Empresa activa"
+                descripcion="Define si la empresa estará disponible para ser utilizada."
+                checked={modal.activo}
+                onChange={valor => cambiar("activo", valor)}
+                deshabilitado={saving}
+              />
+            </ListaInterruptores>
+          )}
+
+        </Modal>
       )}
 
     </div>
-
   )
-
 }

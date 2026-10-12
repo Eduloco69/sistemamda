@@ -1,10 +1,26 @@
 import { useEffect, useState } from "react"
 import api from "../services/api"
-import "../styles/Departamentos.css"
+import "../styles/Admin.css"
+import {
+  BotonEditar,
+  Campo,
+  Cargando,
+  contar,
+  EncabezadoPagina,
+  Estado,
+  Interruptor,
+  ListaInterruptores,
+  Marca,
+  Modal,
+  obtenerMensajeError,
+  Tarjeta,
+  Vacio
+} from "../components/AdminUI"
 
 export default function Departamentos() {
   const [departamentos, setDepartamentos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [errorCarga, setErrorCarga] = useState("")
 
   const [modalOpen, setModalOpen] = useState(false)
   const [modoEdicion, setModoEdicion] = useState(false)
@@ -14,7 +30,7 @@ export default function Departamentos() {
   const [tipoDepartamento, setTipoDepartamento] = useState("")
   const [activo, setActivo] = useState(true)
 
-  const [error, setError] = useState("")
+  const [errorForm, setErrorForm] = useState("")
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
@@ -24,7 +40,7 @@ export default function Departamentos() {
   async function cargarDepartamentos() {
     try {
       setLoading(true)
-      setError("")
+      setErrorCarga("")
 
       const response = await api.get("/departamento")
 
@@ -32,10 +48,11 @@ export default function Departamentos() {
     } catch (error) {
       console.error("Error obteniendo departamentos:", error)
 
-      setError(
-        error.response?.data?.Error ||
-        error.response?.data?.Mensaje ||
-        "No fue posible obtener los departamentos."
+      setErrorCarga(
+        obtenerMensajeError(
+          error,
+          "No fue posible obtener los departamentos."
+        )
       )
     } finally {
       setLoading(false)
@@ -50,7 +67,7 @@ export default function Departamentos() {
     setTipoDepartamento("")
     setActivo(true)
 
-    setError("")
+    setErrorForm("")
     setModalOpen(true)
   }
 
@@ -60,9 +77,9 @@ export default function Departamentos() {
 
     setNombre(departamento.nombre || "")
     setTipoDepartamento(departamento.tipoDepartamento || "")
-    setActivo(departamento.activo)
+    setActivo(Boolean(departamento.activo))
 
-    setError("")
+    setErrorForm("")
     setModalOpen(true)
   }
 
@@ -71,28 +88,26 @@ export default function Departamentos() {
 
     setModalOpen(false)
     setDepartamentoSeleccionado(null)
-    setError("")
+    setErrorForm("")
   }
 
-  async function guardarDepartamento(e) {
-    e.preventDefault()
-
+  async function guardarDepartamento() {
     if (!nombre.trim()) {
-      setError("Debes ingresar el nombre del departamento.")
+      setErrorForm("Debes ingresar el nombre del departamento.")
       return
     }
 
     if (!tipoDepartamento.trim()) {
-      setError("Debes ingresar el tipo de departamento.")
+      setErrorForm("Debes ingresar el tipo de departamento.")
       return
     }
 
     try {
       setGuardando(true)
-      setError("")
+      setErrorForm("")
 
       if (modoEdicion) {
-        const response = await api.put(
+        await api.put(
           `/departamento/${departamentoSeleccionado.departamentoId}`,
           {
             nombre: nombre.trim(),
@@ -100,464 +115,199 @@ export default function Departamentos() {
             activo: activo ? true : false
           }
         )
-
-        console.log(response.data.Mensaje)
-
       } else {
-        const response = await api.post("/departamento", {
+        await api.post("/departamento", {
           nombre: nombre.trim(),
           tipoDepartamento: tipoDepartamento.trim()
         })
-
-        console.log(response.data.Mensaje)
       }
 
       await cargarDepartamentos()
 
       setModalOpen(false)
       setDepartamentoSeleccionado(null)
-
     } catch (error) {
       console.error("Error guardando departamento:", error)
 
-      const apiError = error.response?.data?.Error
-
-      if (Array.isArray(apiError)) {
-        setError(apiError.join(", "))
-      } else {
-        setError(
-          apiError ||
-          error.response?.data?.Mensaje ||
+      setErrorForm(
+        obtenerMensajeError(
+          error,
           "No fue posible guardar el departamento."
         )
-      }
+      )
     } finally {
       setGuardando(false)
     }
   }
 
   return (
-    <div className="departamentos-page">
+    <div className="adm-page">
 
-      <div className="departamentos-header">
+      <EncabezadoPagina
+        titulo="Departamentos"
+        descripcion="Administra los departamentos disponibles en el sistema."
+        accion="Nuevo departamento"
+        onAccion={abrirCrear}
+      />
 
-        <div>
-          <h1>Departamentos</h1>
-          <p>
-            Administra los departamentos disponibles en el sistema.
-          </p>
-        </div>
-
-        <button
-          className="departamentos-primary-button"
-          onClick={abrirCrear}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-
-          Nuevo departamento
-        </button>
-
-      </div>
-
-      <div className="departamentos-card">
-
-        <div className="departamentos-card-header">
-          <div>
-            <h2>Departamentos registrados</h2>
-            <span>
-              {departamentos.length} departamento
-              {departamentos.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-        </div>
+      <Tarjeta
+        titulo="Departamentos registrados"
+        resumen={
+          loading || errorCarga
+            ? null
+            : contar(
+                departamentos.length,
+                "departamento",
+                "departamentos"
+              )
+        }
+      >
 
         {loading ? (
 
-          <div className="departamentos-loading">
-            <div className="departamentos-spinner"></div>
-            <span>Cargando departamentos...</span>
-          </div>
+          <Cargando texto="Cargando departamentos..." />
 
-        ) : error && departamentos.length === 0 ? (
+        ) : errorCarga && departamentos.length === 0 ? (
 
-          <div className="departamentos-empty">
-            <div className="departamentos-empty-icon">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8v4" />
-                <path d="M12 16h.01" />
-              </svg>
-            </div>
-
-            <h3>No fue posible cargar los departamentos</h3>
-
-            <p>{error}</p>
-
-            <button
-              className="departamentos-secondary-button"
-              onClick={cargarDepartamentos}
-            >
-              Reintentar
-            </button>
-          </div>
+          <Vacio
+            icono="alerta"
+            titulo="No fue posible cargar los departamentos"
+            texto={errorCarga}
+            accion="Reintentar"
+            onAccion={cargarDepartamentos}
+          />
 
         ) : departamentos.length === 0 ? (
 
-          <div className="departamentos-empty">
-
-            <div className="departamentos-empty-icon">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M4 6h16" />
-                <path d="M4 12h16" />
-                <path d="M4 18h16" />
-              </svg>
-            </div>
-
-            <h3>No hay departamentos registrados</h3>
-
-            <p>
-              Crea el primer departamento para comenzar a utilizar esta sección.
-            </p>
-
-            <button
-              className="departamentos-secondary-button"
-              onClick={abrirCrear}
-            >
-              Crear departamento
-            </button>
-
-          </div>
+          <Vacio
+            icono="lista"
+            titulo="No hay departamentos registrados"
+            texto="Crea el primer departamento para comenzar a utilizar esta sección."
+            accion="Crear departamento"
+            onAccion={abrirCrear}
+          />
 
         ) : (
 
-          <div className="departamentos-table-wrapper">
-
-            <table className="departamentos-table">
+          <div className="adm-table-wrap">
+            <table className="adm-table">
 
               <thead>
                 <tr>
                   <th>Departamento</th>
                   <th>Tipo</th>
                   <th>Estado</th>
-                  <th className="departamentos-action-column">
-                    Acción
-                  </th>
+                  <th className="adm-col-action">Acción</th>
                 </tr>
               </thead>
 
               <tbody>
-
-                {departamentos.map((departamento) => (
-
+                {departamentos.map(departamento => (
                   <tr
                     key={departamento.departamentoId}
-                    className="departamento-row"
+                    className="adm-row"
                   >
-
                     <td>
-                      <div className="departamento-name">
-
-                        <div className="departamento-icon">
-                          <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                          >
-                            <rect
-                              x="4"
-                              y="3"
-                              width="16"
-                              height="18"
-                              rx="1.5"
-                            />
-                            <path d="M8 7h8" />
-                            <path d="M8 11h8" />
-                            <path d="M8 15h4" />
-                          </svg>
-                        </div>
-
-                        <span>
-                          {departamento.nombre}
-                        </span>
-
+                      <div className="adm-name">
+                        <Marca icono="edificio" />
+                        <span>{departamento.nombre}</span>
                       </div>
                     </td>
 
                     <td>
-                      <span className="departamento-type">
+                      <span className="adm-plain">
                         {departamento.tipoDepartamento || "Sin tipo"}
                       </span>
                     </td>
 
                     <td>
-
-                      <span
-                        className={
-                          departamento.activo
-                            ? "status-badge status-active"
-                            : "status-badge status-inactive"
-                        }
-                      >
-                        <span className="status-dot"></span>
-
-                        {departamento.activo
-                          ? "Activo"
-                          : "Inactivo"}
-                      </span>
-
+                      <Estado activo={departamento.activo} />
                     </td>
 
-                    <td className="departamentos-action-column">
-
-                      <button
-                        className="action-button"
+                    <td className="adm-col-action">
+                      <BotonEditar
+                        titulo={`Editar ${departamento.nombre}`}
                         onClick={() => abrirEditar(departamento)}
-                        title="Editar departamento"
-                        >
-                        <svg
-                            width="17"
-                            height="17"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
-                        </svg>
-                        </button>
-
+                      />
                     </td>
-
                   </tr>
-
                 ))}
-
               </tbody>
 
             </table>
-
           </div>
 
         )}
 
-      </div>
+      </Tarjeta>
 
       {modalOpen && (
-
-        <div
-          className="departamentos-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              cerrarModal()
-            }
-          }}
+        <Modal
+          titulo={
+            modoEdicion
+              ? "Editar departamento"
+              : "Nuevo departamento"
+          }
+          descripcion={
+            modoEdicion
+              ? "Modifica la información del departamento."
+              : "Ingresa la información del nuevo departamento."
+          }
+          onCerrar={cerrarModal}
+          onEnviar={guardarDepartamento}
+          guardando={guardando}
+          error={errorForm}
+          textoEnviar={
+            modoEdicion
+              ? "Guardar cambios"
+              : "Crear departamento"
+          }
         >
 
-          <div className="departamentos-modal">
+          <Campo
+            etiqueta="Nombre del departamento"
+            id="departamento-nombre"
+          >
+            <input
+              id="departamento-nombre"
+              type="text"
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              placeholder="Ej: Contabilidad"
+              maxLength={40}
+              disabled={guardando}
+              autoFocus
+            />
+          </Campo>
 
-            <div className="departamentos-modal-header">
+          <Campo
+            etiqueta="Tipo de departamento"
+            id="departamento-tipo"
+          >
+            <input
+              id="departamento-tipo"
+              type="text"
+              value={tipoDepartamento}
+              onChange={e => setTipoDepartamento(e.target.value)}
+              placeholder="Ej: Administrativo"
+              maxLength={20}
+              disabled={guardando}
+            />
+          </Campo>
 
-              <div>
-                <h2>
-                  {modoEdicion
-                    ? "Editar departamento"
-                    : "Nuevo departamento"}
-                </h2>
+          {modoEdicion && (
+            <ListaInterruptores>
+              <Interruptor
+                titulo="Departamento activo"
+                descripcion="Define si el departamento estará disponible para ser utilizado."
+                checked={activo}
+                onChange={setActivo}
+                deshabilitado={guardando}
+              />
+            </ListaInterruptores>
+          )}
 
-                <p>
-                  {modoEdicion
-                    ? "Modifica la información del departamento."
-                    : "Ingresa la información del nuevo departamento."}
-                </p>
-              </div>
-
-              <button
-                className="departamentos-modal-close"
-                onClick={cerrarModal}
-                disabled={guardando}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-
-            </div>
-
-            <form onSubmit={guardarDepartamento}>
-
-              <div className="departamentos-modal-body">
-
-                {error && (
-
-                  <div className="departamentos-form-error">
-
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    >
-                      <circle cx="12" cy="12" r="9" />
-                      <path d="M12 8v4" />
-                      <path d="M12 16h.01" />
-                    </svg>
-
-                    <span>{error}</span>
-
-                  </div>
-
-                )}
-
-                <div className="departamentos-form-group">
-
-                  <label htmlFor="nombre">
-                    Nombre del departamento
-                  </label>
-
-                  <input
-                    id="nombre"
-                    type="text"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej: Contabilidad"
-                    disabled={guardando}
-                  />
-
-                </div>
-
-                <div className="departamentos-form-group">
-
-                  <label htmlFor="tipoDepartamento">
-                    Tipo de departamento
-                  </label>
-
-                  <input
-                    id="tipoDepartamento"
-                    type="text"
-                    value={tipoDepartamento}
-                    onChange={(e) =>
-                      setTipoDepartamento(e.target.value)
-                    }
-                    placeholder="Ej: Administrativo"
-                    disabled={guardando}
-                  />
-
-                </div>
-
-                {modoEdicion && (
-
-                  <div className="departamentos-active-field">
-
-                    <div>
-                      <strong>Estado del departamento</strong>
-
-                      <span>
-                        Define si el departamento estará disponible
-                        para ser utilizado.
-                      </span>
-                    </div>
-
-                    <label className="departamentos-switch">
-
-                      <input
-                        type="checkbox"
-                        checked={activo}
-                        onChange={(e) =>
-                          setActivo(e.target.checked)
-                        }
-                        disabled={guardando}
-                      />
-
-                      <span className="departamentos-switch-slider"></span>
-
-                    </label>
-
-                  </div>
-
-                )}
-
-              </div>
-
-              <div className="departamentos-modal-footer">
-
-                <button
-                  type="button"
-                  className="departamentos-cancel-button"
-                  onClick={cerrarModal}
-                  disabled={guardando}
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="submit"
-                  className="departamentos-save-button"
-                  disabled={guardando}
-                >
-
-                  {guardando ? (
-                    <>
-                      <span className="departamentos-button-spinner"></span>
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      {modoEdicion
-                        ? "Guardar cambios"
-                        : "Crear departamento"}
-                    </>
-                  )}
-
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
-        </div>
-
+        </Modal>
       )}
 
     </div>

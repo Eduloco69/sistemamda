@@ -12,6 +12,7 @@ from app.database.connection import get_connection
 from app.utils.password_gen import password_generator
 from app.utils.password_val import password_check
 from app.utils.token_change_pass import gen_token, hash_token
+from app.utils.valida_rut import validar_rut
 from shared.app.auth.jwt_handler import generate_token
 
 logger = logging.getLogger(__name__)
@@ -32,8 +33,6 @@ _DUMMY_HASH = bcrypt.hashpw(b"dummy-password", bcrypt.gensalt()).decode()
 _mail_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="mail")
 
 class ServiceError(Exception):
-    """Error controlado: aborta la transacción (rollback) y devuelve body/status."""
-
     def __init__(self, body: dict, status: int):
         super().__init__(body.get("Mensaje") or body.get("Error"))
         self.body = body
@@ -59,8 +58,6 @@ def db_cursor():
 
 
 def _send_mail(endpoint: str, body: dict, descripcion: str) -> None:
-    """Se ejecuta en un hilo aparte. Nunca propaga excepciones ni loguea el body
-    (contiene contraseñas / tokens)."""
     try:
         resp = requests.post(f"{MAIL_SERVICE}/{endpoint}", json=body, timeout=10)
         resp.raise_for_status()
@@ -68,27 +65,20 @@ def _send_mail(endpoint: str, body: dict, descripcion: str) -> None:
     except requests.RequestException:
         logger.exception("Falló el envío del correo '%s'", descripcion)
 
-
 def _send_mail_async(endpoint: str, body: dict, descripcion: str) -> None:
     _mail_executor.submit(_send_mail, endpoint, body, descripcion)
 
-
 def _generate_valid_password() -> str:
-    """Genera una contraseña válida con límite de intentos (evita loop infinito)."""
     for _ in range(MAX_PASSWORD_ATTEMPTS):
         password = password_generator()
         if password_check(password):
             return password
     raise RuntimeError("No se pudo generar una contraseña válida")
 
-
 def _hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-
 def _create_reset_token(cursor, user_id) -> str:
-    """Invalida los tokens vigentes del usuario y crea uno nuevo (30 min).
-    Debe llamarse dentro de una transacción."""
     cursor.execute(
         f"""
         UPDATE {T_TOKEN}
@@ -109,9 +99,7 @@ def _create_reset_token(cursor, user_id) -> str:
         raise ServiceError({"Mensaje": "No se logró crear token"}, 400)
     return token
 
-
 def _fetch_token(cursor, token_hash):
-    """La comparación de expiración se hace en SQL (misma hora que la BD)."""
     cursor.execute(
         f"""
         SELECT usuarioId, usado, fechaUso,
@@ -123,9 +111,7 @@ def _fetch_token(cursor, token_hash):
     )
     return cursor.fetchone()
 
-
 def _token_error(row):
-    """Devuelve (body, status) si el token no es utilizable, o None si es válido."""
     if row is None:
         return {"Mensaje": "Token no valido"}, 404
     if row.expirado:
@@ -159,6 +145,11 @@ def register_user(data):
     correo = data["userMail"].strip().lower()
     ap_mat = data.get("userApMat")
     ap_mat = ap_mat.strip() or None if isinstance(ap_mat, str) else None
+
+    if not validar_rut(rut):
+        return {
+            'Mensaje':'El Rut ingresado no es valido'
+        }, 406
 
     try:
         password = _generate_valid_password()
@@ -271,7 +262,7 @@ def perfil_user(user_id):
         with db_cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT userId, userNom, userApPat, userApMat, userMail,
+                SELECT userId, userRut, userNom, userApPat, userApMat, userMail,
                        userTelMovil, userTelFijo, departamentoId, rolId, ActiveFlg,
                        fechaCreacion, fechaTerminoVig, changePassFlg
                 FROM {T_USUARIO}
@@ -287,13 +278,6 @@ def perfil_user(user_id):
     except Exception:
         logger.exception("Error obteniendo perfil del usuario %s", user_id)
         return {"Mensaje": "Error obteniendo perfil"}, 500
-
-def buscar_usuario(data, permisos):
-    if 'GESTIONAR_USUARIOS' not in permisos:
-        return {'Mensaje':'Usuario sin privilegios'}, 401
-
-    mail = data.get('mail')
-    rut = data.get('rut')
 
 def val_change_pass_service(token):
     try:
@@ -399,3 +383,146 @@ def recuperar_contraseña_service(mail):
     except Exception:
         logger.exception("Error solicitando cambio de contraseña")
         return {"Mensaje": "Error solicitando cambio de contraseña"}, 500
+
+def buscar_usuario_service(rut, mail, permisos):
+    if not 'GESTIONAR_USUARIOS' in permisos:
+        return {
+            'Mensaje':'Usuario sin privilegios'
+        }, 401
+    sql = f"SELECT [userId] FROM {T_USUARIO} "
+
+    if rut is not None:
+        busqueda = rut
+        sql += "WHERE userRut = ?"
+    elif mail is not None:
+        busqueda = mail
+        sql += "WHERE userMail = ?"
+    else:
+        return {
+            'Mensaje':'Error validando datos'
+        }, 406
+
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(sql, (busqueda))
+            row = cursor.fetchone()
+            if not row:
+                return {'Mensaje':'Usuario no encontrado'}, 404
+            user, s = perfil_user(row[0])
+
+            return user, s
+        
+    except Exception:
+        logger.exception("Error obteniendo perfil del usuario %s", data)
+        return {"Mensaje": "Error obteniendo perfil"}, 500
+
+
+def modificar_usuario_service(user_id, data, permisos):
+    if 'MODIFICAR_USUARIOS' not in permisos:
+        return {
+            'Mensaje': 'Usuario sin privilegios'
+        }, 403
+
+    if not isinstance(data, dict) or not data:
+        return {
+            'Mensaje': 'Debe enviar al menos un campo para modificar'
+        }, 400
+
+    campos_permitidos = {
+        'rut': 'userRut',
+        'userNom': 'userNom',
+        'userApPat': 'userApPat',
+        'userApMat': 'userApMat',
+        'userMail': 'userMail',
+        'telMovil': 'userTelMovil',
+        'telFijo': 'userTelFijo',
+        'departamento': 'departamentoId',
+        'rol': 'rolId',
+        'activo': 'activeFlg'
+    }
+
+    campos = {
+        columna: data[clave]
+        for clave, columna in campos_permitidos.items()
+        if clave in data
+    }
+
+    if not campos:
+        return {
+            'Mensaje': 'No se recibieron campos válidos para modificar'
+        }, 400
+
+    if 'rut' in data:
+        rut = data['rut']
+
+        if not rut or not validar_rut(rut):
+            return {
+                'Mensaje': 'El RUT ingresado no es válido'
+            }, 400
+
+    asignaciones = ', '.join(
+        f'[{columna}] = ?'
+        for columna in campos
+    )
+
+    sql = f"""
+        UPDATE [MesaDeAyuda].[dbo].[usuario]
+        SET {asignaciones}
+        WHERE [userId] = ?
+    """
+
+    valores = list(campos.values())
+    valores.append(user_id)
+
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(sql, valores)
+
+            if cursor.rowcount == 0:
+                return {
+                    'Mensaje': 'Usuario no encontrado'
+                }, 404
+
+        return {
+            'Mensaje': 'Usuario modificado correctamente'
+        }, 200
+
+    except pyodbc.IntegrityError:
+        logger.warning(
+            'Error de integridad al modificar usuario %s',
+            user_id
+        )
+        return {
+            'Mensaje': 'No se pudo modificar el usuario; '
+                       'revise el correo, RUT y las referencias relacionadas'
+        }, 409
+
+    except Exception:
+        logger.exception(
+            'Error modificando al usuario %s',
+            user_id
+        )
+        return {
+            'Mensaje': 'Error interno modificando al usuario'
+        }, 500
+
+def obtener_roles_service():
+    sql = "SELECT [rolId] ,[rolGlosa] FROM [MesaDeAyuda].[dbo].[rol]"
+
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(sql)
+            columns = [col[0] for col in cursor.description]
+            roles = [
+                dict(zip(columns, row))
+                for row in cursor.fetchall()
+            ]
+            return {
+                'Mensaje':'Roles obtenidos correctamente',
+                'Roles':roles
+            }, 200
+    except Exception:
+        logger.exception("Error obteniendo los datos")
+        return {
+            'Mensaje':'Error obteniendo los datos'
+        }, 500

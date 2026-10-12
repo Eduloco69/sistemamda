@@ -1,1944 +1,790 @@
-import { useEffect, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import api from "../services/api"
-import "../styles/Categorias.css"
+import "../styles/Admin.css"
+import {
+  BotonEditar,
+  Campo,
+  CampoColor,
+  Cargando,
+  COLOR_INICIAL,
+  contar,
+  EncabezadoPagina,
+  esColorValido,
+  Estado,
+  Icono,
+  Interruptor,
+  ListaInterruptores,
+  Marca,
+  Modal,
+  obtenerMensajeError,
+  SiNo,
+  Tarjeta,
+  Vacio
+} from "../components/AdminUI"
+
+const MAX_CATEGORIA = 40
+const MAX_SUBCATEGORIA = 40
 
 export default function Categorias() {
+  const [categorias, setCategorias] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-    const [categorias, setCategorias] = useState([])
+  const [expanded, setExpanded] = useState({})
+  const [subcategorias, setSubcategorias] = useState({})
+  const [loadingSubcategorias, setLoadingSubcategorias] = useState({})
+  const [erroresSubcategorias, setErroresSubcategorias] = useState({})
 
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState("")
+  const [modalCategoria, setModalCategoria] = useState(null)
+  const [modalSub, setModalSub] = useState(null)
+  const [errorForm, setErrorForm] = useState("")
+  const [saving, setSaving] = useState(false)
 
-    const [expanded, setExpanded] = useState({})
+  useEffect(() => {
+    cargarCategorias()
+  }, [])
 
-    const [subcategorias, setSubcategorias] = useState({})
+  async function cargarCategorias() {
+    try {
+      setLoading(true)
+      setError("")
 
-    const [loadingSubcategorias, setLoadingSubcategorias] = useState({})
+      const response = await api.get("/categoria")
 
-    const [editing, setEditing] = useState(null)
+      setCategorias(response.data.Categorias || [])
+    } catch (error) {
+      console.error(error)
 
-    const [editingSubcategoria, setEditingSubcategoria] = useState(null)
+      setError(
+        obtenerMensajeError(
+          error,
+          "No fue posible obtener las categorías."
+        )
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    const [newSubcategoria, setNewSubcategoria] = useState(null)
+  async function toggleCategoria(categoriaId) {
+    const estaAbierta = expanded[categoriaId]
 
-    const [newCategoria, setNewCategoria] = useState(false)
+    setExpanded(prev => ({
+      ...prev,
+      [categoriaId]: !estaAbierta
+    }))
 
-    const [saving, setSaving] = useState(false)
+    if (
+      !estaAbierta &&
+      subcategorias[categoriaId] === undefined
+    ) {
+      await cargarSubcategorias(categoriaId)
+    }
+  }
 
+  async function cargarSubcategorias(categoriaId) {
+    try {
+      setLoadingSubcategorias(prev => ({
+        ...prev,
+        [categoriaId]: true
+      }))
 
-    useEffect(() => {
-        cargarCategorias()
-    }, [])
+      setErroresSubcategorias(prev => ({
+        ...prev,
+        [categoriaId]: ""
+      }))
 
-    async function cargarCategorias() {
+      const response = await api.get(
+        `/categoria/subcategoria/${categoriaId}`
+      )
 
-        try {
+      setSubcategorias(prev => ({
+        ...prev,
+        [categoriaId]: response.data.Subcategorias || []
+      }))
+    } catch (error) {
+      console.error(error)
 
-            setLoading(true)
-            setError("")
+      setErroresSubcategorias(prev => ({
+        ...prev,
+        [categoriaId]: obtenerMensajeError(
+          error,
+          "No fue posible obtener las subcategorías."
+        )
+      }))
+    } finally {
+      setLoadingSubcategorias(prev => ({
+        ...prev,
+        [categoriaId]: false
+      }))
+    }
+  }
 
-            const response = await api.get("/categoria")
+  function abrirNuevaCategoria() {
+    setErrorForm("")
 
-            setCategorias(
-                response.data.Categorias || []
-            )
+    setModalCategoria({
+      modo: "crear",
+      categoriaId: null,
+      categoria: "",
+      color: COLOR_INICIAL,
+      activo: true,
+      adminflg: false
+    })
+  }
 
-        } catch (error) {
+  function abrirEdicion(categoria) {
+    setErrorForm("")
 
-            console.error(error)
+    setModalCategoria({
+      modo: "editar",
+      categoriaId: categoria.categoriaId,
+      categoria: categoria.categoria,
+      color: categoria.color || COLOR_INICIAL,
+      activo: Boolean(categoria.activo),
+      adminflg: Boolean(categoria.adminflg)
+    })
+  }
 
-            setError(
-                error.response?.data?.Mensaje ||
-                "No fue posible obtener las categorías"
-            )
+  function cerrarModalCategoria() {
+    if (saving) return
 
-        } finally {
+    setModalCategoria(null)
+    setErrorForm("")
+  }
 
-            setLoading(false)
+  function cambiarCategoria(campo, valor) {
+    setModalCategoria(prev => ({
+      ...prev,
+      [campo]: valor
+    }))
+  }
 
-        }
+  async function guardarCategoria() {
+    if (!modalCategoria) return
 
+    const nombre = modalCategoria.categoria.trim()
+
+    if (!nombre) {
+      setErrorForm("Ingresa el nombre de la categoría.")
+      return
     }
 
-    async function toggleCategoria(categoriaId) {
-
-        const estaAbierta =
-            expanded[categoriaId]
-
-        setExpanded(prev => ({
-            ...prev,
-            [categoriaId]: !estaAbierta
-        }))
-
-
-        if (
-            !estaAbierta &&
-            subcategorias[categoriaId] === undefined
-        ) {
-
-            await cargarSubcategorias(categoriaId)
-
-        }
-
+    if (!esColorValido(modalCategoria.color)) {
+      setErrorForm("Ingresa un color válido con el formato #RRGGBB.")
+      return
     }
 
-    async function cargarSubcategorias(categoriaId) {
+    try {
+      setSaving(true)
+      setErrorForm("")
 
-        try {
+      const adminflg = modalCategoria.adminflg ? 1 : 0
 
-            setLoadingSubcategorias(prev => ({
-                ...prev,
-                [categoriaId]: true
-            }))
-
-
-            const response =
-                await api.get(
-                    `/categoria/subcategoria/${categoriaId}`
-                )
-
-
-            setSubcategorias(prev => ({
-                ...prev,
-
-                [categoriaId]:
-                    response.data.Subcategorias || []
-
-            }))
-
-
-        } catch (error) {
-
-            console.error(error)
-
-            alert(
-                error.response?.data?.Mensaje ||
-                "No fue posible obtener las subcategorías"
-            )
-
-        } finally {
-
-            setLoadingSubcategorias(prev => ({
-                ...prev,
-                [categoriaId]: false
-            }))
-
-        }
-
-    }
-
-    function abrirEdicion(categoria) {
-
-        setEditing({
-
-            categoriaId:
-                categoria.categoriaId,
-
-            categoria:
-                categoria.categoria,
-
-            color:
-                categoria.color,
-
-            activo:
-                categoria.activo,
-
-            adminflg:
-                categoria.adminflg
-
+      if (modalCategoria.modo === "crear") {
+        const response = await api.post("/categoria", {
+          categoria: nombre,
+          color: modalCategoria.color,
+          adminflg
         })
 
-    }
-
-
-    function cerrarEdicion() {
-
-        if (saving)
-            return
-
-        setEditing(null)
-
-    }
-
-
-    function handleEditChange(e) {
-
-        const {
-            name,
-            value,
-            type,
-            checked
-        } = e.target
-
-
-        setEditing(prev => ({
-
-            ...prev,
-
-            [name]:
-                type === "checkbox"
-                    ? checked
-                    : value
-
-        }))
-
-    }
-
-    async function guardarCategoria() {
-
-        if (!editing)
-            return
-
-
-        if (!editing.categoria.trim()) {
-
-            alert(
-                "El nombre de la categoría es obligatorio"
-            )
-
-            return
-
-        }
-
-
-        if (!editing.color) {
-
-            alert(
-                "El color de la categoría es obligatorio"
-            )
-
-            return
-
-        }
-
-
-        try {
-
-            setSaving(true)
-
-
-            const data = {
-
-                categoria:
-                    editing.categoria.trim(),
-
-                color:
-                    editing.color,
-
-                activo:
-                    editing.activo
-                        ? 1
-                        : 0,
-
-                adminflg:
-                    editing.adminflg
-                        ? 1
-                        : 0
-
-            }
-
-
-            await api.put(
-                `/categoria/${editing.categoriaId}`,
-                data
-            )
-
-
-            setCategorias(prev =>
-                prev.map(categoria =>
-
-                    categoria.categoriaId ===
-                    editing.categoriaId
-
-                        ? {
-
-                            ...categoria,
-
-                            categoria:
-                                data.categoria,
-
-                            color:
-                                data.color,
-
-                            activo:
-                                data.activo === 1,
-
-                            adminflg:
-                                data.adminflg === 1
-
-                        }
-
-                        : categoria
-
-                )
-            )
-
-
-            setEditing(null)
-
-
-        } catch (error) {
-
-            console.error(error)
-
-            const mensaje =
-                error.response?.data?.Mensaje ||
-                error.response?.data?.Error?.join(", ") ||
-                "No fue posible actualizar la categoría"
-
-
-            alert(mensaje)
-
-        } finally {
-
-            setSaving(false)
-
-        }
-
-    }
-
-    async function crearCategoria() {
-
-        if (!newCategoria)
-            return
-
-
-        if (!newCategoria.categoria.trim()) {
-
-            alert(
-                "El nombre de la categoría es obligatorio"
-            )
-
-            return
-
-        }
-
-
-        if (!newCategoria.color) {
-
-            alert(
-                "El color de la categoría es obligatorio"
-            )
-
-            return
-
-        }
-
-
-        try {
-
-            setSaving(true)
-
-
-            const data = {
-
-                categoria:
-                    newCategoria.categoria.trim(),
-
-                color:
-                    newCategoria.color,
-
-                adminflg:
-                    newCategoria.adminflg
-                        ? 1
-                        : 0
-
-            }
-
-
-            const response =
-                await api.post(
-                    "/categoria",
-                    data
-                )
-
-
-            const categoriaId =
-                response.data?.CategoriaId
-
-            setCategorias(prev => [
-
-                ...prev,
-
-                {
-
-                    categoriaId,
-
-                    categoria:
-                        data.categoria,
-
-                    color:
-                        data.color,
-
-                    activo:
-                        true,
-
-                    adminflg:
-                        data.adminflg === 1
-
+        setCategorias(prev => [
+          ...prev,
+          {
+            categoriaId: response.data?.CategoriaId,
+            categoria: nombre,
+            color: modalCategoria.color,
+            activo: true,
+            adminflg: adminflg === 1
+          }
+        ])
+      } else {
+        const activo = modalCategoria.activo ? 1 : 0
+
+        await api.put(`/categoria/${modalCategoria.categoriaId}`, {
+          categoria: nombre,
+          color: modalCategoria.color,
+          activo,
+          adminflg
+        })
+
+        setCategorias(prev =>
+          prev.map(categoria =>
+            categoria.categoriaId === modalCategoria.categoriaId
+              ? {
+                  ...categoria,
+                  categoria: nombre,
+                  color: modalCategoria.color,
+                  activo: activo === 1,
+                  adminflg: adminflg === 1
                 }
+              : categoria
+          )
+        )
+      }
 
-            ])
+      setModalCategoria(null)
+    } catch (error) {
+      console.error(error)
 
+      setErrorForm(
+        obtenerMensajeError(
+          error,
+          modalCategoria.modo === "crear"
+            ? "No fue posible crear la categoría."
+            : "No fue posible actualizar la categoría."
+        )
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
 
-            setNewCategoria(false)
+  function abrirNuevaSubcategoria(categoriaId) {
+    setErrorForm("")
 
+    setModalSub({
+      modo: "crear",
+      categoriaId,
+      subCat: "",
+      adminflg: false
+    })
+  }
 
-        } catch (error) {
+  function abrirEdicionSubcategoria(sub) {
+    setErrorForm("")
 
-            console.error(error)
+    setModalSub({
+      modo: "editar",
+      subCatId: sub.subCatId,
+      categoriaId: sub.categoriaId,
+      categoriaIdOriginal: sub.categoriaId,
+      subCat: sub.subCat,
+      activo: Boolean(sub.activo),
+      adminflg: Boolean(sub.adminflg)
+    })
+  }
 
-            alert(
-                error.response?.data?.Mensaje ||
-                "No fue posible crear la categoría"
-            )
+  function cerrarModalSub() {
+    if (saving) return
 
-        } finally {
+    setModalSub(null)
+    setErrorForm("")
+  }
 
-            setSaving(false)
+  function cambiarSub(campo, valor) {
+    setModalSub(prev => ({
+      ...prev,
+      [campo]: valor
+    }))
+  }
 
-        }
+  async function guardarSubcategoria() {
+    if (!modalSub) return
 
+    const nombre = modalSub.subCat.trim()
+
+    if (!nombre) {
+      setErrorForm("Ingresa el nombre de la subcategoría.")
+      return
     }
 
-
-    // =========================================================
-    // ABRIR CREAR SUBCATEGORIA
-    // =========================================================
-
-    function abrirNuevaSubcategoria(categoriaId) {
-
-        setNewSubcategoria({
-
-            categoriaId,
-
-            subcategoria: "",
-
-            adminflg: false
-
-        })
-
+    if (modalSub.modo === "editar" && !modalSub.categoriaId) {
+      setErrorForm("Selecciona la categoría de la subcategoría.")
+      return
     }
 
-
-    // =========================================================
-    // CREAR SUBCATEGORIA
-    // =========================================================
-
-    async function crearSubcategoria() {
-
-        if (!newSubcategoria)
-            return
-
-
-        if (!newSubcategoria.subcategoria.trim()) {
-
-            alert(
-                "El nombre de la subcategoría es obligatorio"
-            )
-
-            return
-
-        }
-
-
-        try {
-
-            setSaving(true)
-
-
-            const data = {
-
-                subcategoria:
-                    newSubcategoria.subcategoria.trim(),
-
-                adminflg:
-                    newSubcategoria.adminflg
-                        ? 1
-                        : 0
-
-            }
-
-
-            const response =
-                await api.post(
-                    `/categoria/subcategoria/${newSubcategoria.categoriaId}`,
-                    data
-                )
-
-
-            const subCatId =
-                response.data?.Subcategoria ||
-                response.data?.subCatId ||
-                response.data?.id
-
-
-            const nueva = {
-
-                subCatId,
-
-                categoriaId:
-                    newSubcategoria.categoriaId,
-
-                subCat:
-                    data.subcategoria,
-
-                activo:
-                    true,
-
-                adminflg:
-                    data.adminflg === 1
-
-            }
-
-
-            setSubcategorias(prev => ({
-
-                ...prev,
-
-                [newSubcategoria.categoriaId]: [
-
-                    ...(prev[
-                        newSubcategoria.categoriaId
-                    ] || []),
-
-                    nueva
-
-                ]
-
-            }))
-
-
-            setNewSubcategoria(null)
-
-
-        } catch (error) {
-
-            console.error(error)
-
-            alert(
-                error.response?.data?.Mensaje ||
-                "No fue posible crear la subcategoría"
-            )
-
-        } finally {
-
-            setSaving(false)
-
-        }
-
-    }
-
-
-    // =========================================================
-    // ABRIR EDICION SUBCATEGORIA
-    // =========================================================
-
-    function abrirEdicionSubcategoria(subcategoria) {
-
-        setEditingSubcategoria({
-
-            subCatId:
-                subcategoria.subCatId,
-
-            subCat:
-                subcategoria.subCat,
-
-            categoriaId:
-                subcategoria.categoriaId,
-
-            categoriaIdOriginal:
-                subcategoria.categoriaId,
-
-            activo:
-                subcategoria.activo,
-
-            adminflg:
-                subcategoria.adminflg
-
-        })
-
-    }
-
-
-    // =========================================================
-    // GUARDAR SUBCATEGORIA
-    // =========================================================
-
-    async function guardarSubcategoria() {
-
-        if (!editingSubcategoria)
-            return
-
-
-        if (!editingSubcategoria.subCat.trim()) {
-
-            alert(
-                "El nombre de la subcategoría es obligatorio"
-            )
-
-            return
-
-        }
-
-
-        try {
-
-            setSaving(true)
-
-
-            const categoriaOriginal =
-                Number(
-                    editingSubcategoria.categoriaIdOriginal
-                )
-
-
-            const nuevaCategoria =
-                Number(
-                    editingSubcategoria.categoriaId
-                )
-
-
-            const data = {
-
-                subCat:
-                    editingSubcategoria.subCat.trim(),
-
-                categoriaId:
-                    nuevaCategoria,
-
-                activo:
-                    editingSubcategoria.activo
-                        ? 1
-                        : 0,
-
-                adminflg:
-                    editingSubcategoria.adminflg
-                        ? 1
-                        : 0
-
-            }
-
-
-            // =================================================
-            // ACTUALIZAR EN BACKEND
-            // =================================================
-
-            await api.put(
-                `/categoria/subcategoria/${editingSubcategoria.subCatId}`,
-                data
-            )
-
-
-            // =================================================
-            // INVALIDAR CACHE DE AMBAS CATEGORIAS
-            // =================================================
-
-            setSubcategorias(prev => {
-
-                const nuevoEstado = {
-                    ...prev
-                }
-
-
-                delete nuevoEstado[
-                    categoriaOriginal
-                ]
-
-                delete nuevoEstado[
-                    nuevaCategoria
-                ]
-
-
-                return nuevoEstado
-
-            })
-
-
-            // =================================================
-            // RECARGAR CATEGORIA ORIGINAL
-            // =================================================
-
-            if (
-                expanded[categoriaOriginal]
-            ) {
-
-                await cargarSubcategorias(
-                    categoriaOriginal
-                )
-
-            }
-
-
-            // =================================================
-            // RECARGAR CATEGORIA DESTINO
-            // =================================================
-
-            if (
-                nuevaCategoria !== categoriaOriginal &&
-                expanded[nuevaCategoria]
-            ) {
-
-                await cargarSubcategorias(
-                    nuevaCategoria
-                )
-
-            }
-
-
-            setEditingSubcategoria(null)
-
-
-        } catch (error) {
-
-            console.error(error)
-
-            alert(
-                error.response?.data?.Mensaje ||
-                "No fue posible actualizar la subcategoría"
-            )
-
-        } finally {
-
-            setSaving(false)
-
-        }
-
-    }
-
-
-    // =========================================================
-    // LOADING PRINCIPAL
-    // =========================================================
-
-    if (loading) {
-
-        return (
-
-            <div className="categorias-page">
-
-                <div className="categorias-loading">
-
-                    <div className="loading-spinner"></div>
-
-                    <span>
-                        Cargando categorías...
-                    </span>
-
-                </div>
-
-            </div>
-
+    try {
+      setSaving(true)
+      setErrorForm("")
+
+      const adminflg = modalSub.adminflg ? 1 : 0
+
+      if (modalSub.modo === "crear") {
+        const categoriaId = modalSub.categoriaId
+
+        const response = await api.post(
+          `/categoria/subcategoria/${categoriaId}`,
+          {
+            subcategoria: nombre,
+            adminflg
+          }
         )
 
+        const subCatId =
+          response.data?.Subcategoria ||
+          response.data?.subCatId ||
+          response.data?.id
+
+        setSubcategorias(prev => ({
+          ...prev,
+          [categoriaId]: [
+            ...(prev[categoriaId] || []),
+            {
+              subCatId,
+              categoriaId,
+              subCat: nombre,
+              activo: true,
+              adminflg: adminflg === 1
+            }
+          ]
+        }))
+      } else {
+        const categoriaOriginal = Number(modalSub.categoriaIdOriginal)
+        const nuevaCategoria = Number(modalSub.categoriaId)
+
+        await api.put(
+          `/categoria/subcategoria/${modalSub.subCatId}`,
+          {
+            subCat: nombre,
+            categoriaId: nuevaCategoria,
+            activo: modalSub.activo ? 1 : 0,
+            adminflg
+          }
+        )
+
+        setSubcategorias(prev => {
+          const nuevoEstado = { ...prev }
+
+          delete nuevoEstado[categoriaOriginal]
+          delete nuevoEstado[nuevaCategoria]
+
+          return nuevoEstado
+        })
+
+        if (expanded[categoriaOriginal]) {
+          await cargarSubcategorias(categoriaOriginal)
+        }
+
+        if (
+          nuevaCategoria !== categoriaOriginal &&
+          expanded[nuevaCategoria]
+        ) {
+          await cargarSubcategorias(nuevaCategoria)
+        }
+      }
+
+      setModalSub(null)
+    } catch (error) {
+      console.error(error)
+
+      setErrorForm(
+        obtenerMensajeError(
+          error,
+          modalSub.modo === "crear"
+            ? "No fue posible crear la subcategoría."
+            : "No fue posible actualizar la subcategoría."
+        )
+      )
+    } finally {
+      setSaving(false)
     }
-
-
-    // =========================================================
-    // RENDER
-    // =========================================================
-
-    return (
-
-        <div className="categorias-page">
-
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <div className="categorias-header">
-
-                <div>
-
-                    <h1>
-                        Categorías
-                    </h1>
-
-                </div>
-
-
-                <button
-                    className="action-button primary"
-                    onClick={() =>
-                        setNewCategoria({
-
-                            categoria: "",
-
-                            color: "#2563eb",
-
-                            adminflg: false
-
-                        })
-                    }
-                >
-
-                    + Nueva categoría
-
-                </button>
-
-            </div>
-
-
-            {/* =================================================
-                ERROR
-            ================================================= */}
-
-            {error && (
-
-                <div className="categorias-error">
-
-                    {error}
-
-                </div>
-
-            )}
-
-
-            {/* =================================================
-                TABLA
-            ================================================= */}
-
-            <div className="categorias-card">
-
-                <div className="categorias-table-wrapper">
-
-                    <table className="categorias-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Categoría
-                                </th>
-
-                                <th>
-                                    Color
-                                </th>
-
-                                <th>
-                                    Estado
-                                </th>
-
-                                <th>
-                                    Administración
-                                </th>
-
-                                <th>
-                                    Acciones
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            {categorias.length === 0 ? (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="5"
-                                        className="empty-state"
-                                    >
-
-                                        No existen categorías
-                                        configuradas.
-
-                                    </td>
-
-                                </tr>
-
-                            ) : (
-
-                                categorias.map(categoria => {
-
-                                    const abierta =
-                                        expanded[
-                                            categoria.categoriaId
-                                        ]
-
-
-                                    const subs =
-                                        subcategorias[
-                                            categoria.categoriaId
-                                        ] || []
-
-
-                                    return (
-
-                                        <>
-
-                                            {/* =================================
-                                                CATEGORIA
-                                            ================================= */}
-
-                                            <tr
-                                                key={
-                                                    categoria.categoriaId
-                                                }
-                                                className={
-                                                    abierta
-                                                        ? "categoria-row expanded"
-                                                        : "categoria-row"
-                                                }
-                                            >
-
-                                                <td>
-
-                                                    <button
-                                                        className="categoria-expand-button"
-                                                        onClick={() =>
-                                                            toggleCategoria(
-                                                                categoria.categoriaId
-                                                            )
-                                                        }
-                                                    >
-
-                                                        <span
-                                                            className={
-                                                                abierta
-                                                                    ? "expand-icon open"
-                                                                    : "expand-icon"
-                                                            }
-                                                        >
-                                                            ›
-                                                        </span>
-
-
-                                                        <div className="categoria-name">
-
-                                                            <span
-                                                                className="categoria-color-dot"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        categoria.color
-                                                                }}
-                                                            />
-
-                                                            <span>
-                                                                {
-                                                                    categoria.categoria
-                                                                }
-                                                            </span>
-
-                                                        </div>
-
-                                                    </button>
-
-                                                </td>
-
-
-                                                <td>
-
-                                                    <div className="color-preview">
-
-                                                        <span
-                                                            className="color-box"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    categoria.color
-                                                            }}
-                                                        />
-
-                                                        <span>
-                                                            {
-                                                                categoria.color
-                                                            }
-                                                        </span>
-
-                                                    </div>
-
-                                                </td>
-
-
-                                                <td>
-
-                                                    <span
-                                                        className={
-                                                            categoria.activo
-                                                                ? "status-badge active"
-                                                                : "status-badge inactive"
-                                                        }
-                                                    >
-
-                                                        {
-                                                            categoria.activo
-                                                                ? "Activa"
-                                                                : "Inactiva"
-                                                        }
-
-                                                    </span>
-
-                                                </td>
-
-
-                                                <td>
-
-                                                    <span
-                                                        className={
-                                                            categoria.adminflg
-                                                                ? "admin-badge yes"
-                                                                : "admin-badge no"
-                                                        }
-                                                    >
-
-                                                        {
-                                                            categoria.adminflg
-                                                                ? "Sí"
-                                                                : "No"
-                                                        }
-
-                                                    </span>
-
-                                                </td>
-
-
-                                                <td>
-
-                                                    <div className="categoria-actions">
-
-                                                        <button
-                                                            className="action-button primary"
-                                                            onClick={() =>
-                                                                abrirEdicion(
-                                                                    categoria
-                                                                )
-                                                            }
-                                                        >
-
-                                                            Editar
-
-                                                        </button>
-
-                                                    </div>
-
-                                                </td>
-
-                                            </tr>
-
-
-                                            {/* =================================
-                                                SUBCATEGORIAS
-                                            ================================= */}
-
-                                            {abierta && (
-
-                                                <tr
-                                                    key={`sub-${categoria.categoriaId}`}
-                                                    className="subcategorias-row"
-                                                >
-
-                                                    <td
-                                                        colSpan="5"
-                                                    >
-
-                                                        <div className="subcategorias-container">
-
-                                                            <div className="subcategorias-header">
-
-                                                                <div>
-
-                                                                    <strong>
-                                                                        Subcategorías
-                                                                    </strong>
-
-                                                                    <span>
-                                                                        {
-                                                                            subs.length
-                                                                        }
-                                                                    </span>
-
-                                                                </div>
-
-
-                                                                <button
-                                                                    className="action-button secondary"
-                                                                    onClick={() =>
-                                                                        abrirNuevaSubcategoria(
-                                                                            categoria.categoriaId
-                                                                        )
-                                                                    }
-                                                                >
-
-                                                                    + Nueva subcategoría
-
-                                                                </button>
-
-                                                            </div>
-
-
-                                                            {loadingSubcategorias[
-                                                                categoria.categoriaId
-                                                            ] ? (
-
-                                                                <div className="subcategorias-loading">
-
-                                                                    <div className="loading-spinner"></div>
-
-                                                                    Cargando
-                                                                    subcategorías...
-
-                                                                </div>
-
-                                                            ) : subs.length === 0 ? (
-
-                                                                <div className="subcategorias-empty">
-
-                                                                    Esta categoría
-                                                                    todavía no tiene
-                                                                    subcategorías.
-
-                                                                </div>
-
-                                                            ) : (
-
-                                                                <div className="subcategorias-list">
-
-                                                                    {subs.map(sub => (
-
-                                                                        <div
-                                                                            className="subcategoria-item"
-                                                                            key={
-                                                                                sub.subCatId
-                                                                            }
-                                                                        >
-
-                                                                            <div className="subcategoria-info">
-
-                                                                                <span className="subcategoria-bullet">
-                                                                                    •
-                                                                                </span>
-
-                                                                                <span>
-                                                                                    {
-                                                                                        sub.subCat
-                                                                                    }
-                                                                                </span>
-
-                                                                            </div>
-
-
-                                                                            <div className="subcategoria-meta">
-
-                                                                                <span
-                                                                                    className={
-                                                                                        sub.activo
-                                                                                            ? "status-badge active"
-                                                                                            : "status-badge inactive"
-                                                                                    }
-                                                                                >
-
-                                                                                    {
-                                                                                        sub.activo
-                                                                                            ? "Activa"
-                                                                                            : "Inactiva"
-                                                                                    }
-
-                                                                                </span>
-
-
-                                                                                {sub.adminflg && (
-
-                                                                                    <span className="admin-badge yes">
-
-                                                                                        Admin
-
-                                                                                    </span>
-
-                                                                                )}
-
-
-                                                                                <button
-                                                                                    className="subcategoria-edit"
-                                                                                    onClick={() =>
-                                                                                        abrirEdicionSubcategoria(
-                                                                                            sub
-                                                                                        )
-                                                                                    }
-                                                                                >
-
-                                                                                    Editar
-
-                                                                                </button>
-
-                                                                            </div>
-
-                                                                        </div>
-
-                                                                    ))}
-
-                                                                </div>
-
-                                                            )}
-
-                                                        </div>
-
-                                                    </td>
-
-                                                </tr>
-
-                                            )}
-
-                                        </>
-
-                                    )
-
-                                })
-
-                            )}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-
-            {/* =================================================
-                MODAL EDITAR CATEGORIA
-            ================================================= */}
-
-            {editing && (
-
-                <div
-                    className="modal-overlay"
-                    onMouseDown={cerrarEdicion}
-                >
-
-                    <div
-                        className="categoria-modal"
-                        onMouseDown={e =>
-                            e.stopPropagation()
+  }
+
+  const categoriaEsNueva = modalCategoria?.modo === "crear"
+  const subEsNueva = modalSub?.modo === "crear"
+
+  return (
+    <div className="adm-page">
+
+      <EncabezadoPagina
+        titulo="Categorías"
+        descripcion="Administra las categorías y subcategorías disponibles en el sistema."
+        accion="Nueva categoría"
+        onAccion={abrirNuevaCategoria}
+      />
+
+      <Tarjeta
+        titulo="Categorías registradas"
+        resumen={
+          loading || error
+            ? null
+            : contar(categorias.length, "categoría", "categorías")
+        }
+      >
+
+        {loading ? (
+
+          <Cargando texto="Cargando categorías..." />
+
+        ) : error && categorias.length === 0 ? (
+
+          <Vacio
+            icono="alerta"
+            titulo="No fue posible cargar las categorías"
+            texto={error}
+            accion="Reintentar"
+            onAccion={cargarCategorias}
+          />
+
+        ) : categorias.length === 0 ? (
+
+          <Vacio
+            icono="lista"
+            titulo="No hay categorías registradas"
+            texto="Crea la primera categoría para comenzar a utilizar esta sección."
+            accion="Crear categoría"
+            onAccion={abrirNuevaCategoria}
+          />
+
+        ) : (
+
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Color</th>
+                  <th>Estado</th>
+                  <th>Administración</th>
+                  <th className="adm-col-action">Acción</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {categorias.map(categoria => {
+                  const id = categoria.categoriaId
+                  const abierta = Boolean(expanded[id])
+                  const subs = subcategorias[id] || []
+                  const cargandoSubs = Boolean(loadingSubcategorias[id])
+                  const errorSubs = erroresSubcategorias[id]
+
+                  return (
+                    <Fragment key={id}>
+
+                      <tr
+                        className={
+                          abierta
+                            ? "adm-row is-open"
+                            : "adm-row"
                         }
-                    >
-
-                        <div className="modal-header">
-
-                            <div>
-
-                                <h2>
-                                    Editar categoría
-                                </h2>
-
-                            </div>
-
-
-                            <button
-                                className="modal-close"
-                                onClick={cerrarEdicion}
-                                disabled={saving}
+                      >
+                        <td>
+                          <button
+                            type="button"
+                            className="adm-expand"
+                            onClick={() => toggleCategoria(id)}
+                            aria-expanded={abierta}
+                            title={
+                              abierta
+                                ? "Ocultar subcategorías"
+                                : "Ver subcategorías"
+                            }
+                          >
+                            <span
+                              className={
+                                abierta
+                                  ? "adm-chevron is-open"
+                                  : "adm-chevron"
+                              }
                             >
-                                ×
-                            </button>
+                              <Icono nombre="chevron" size={18} />
+                            </span>
 
-                        </div>
+                            <span className="adm-name">
+                              <Marca color={categoria.color} />
+                              <span>{categoria.categoria}</span>
+                            </span>
+                          </button>
+                        </td>
 
+                        <td>
+                          <span className="adm-hex">
+                            {categoria.color}
+                          </span>
+                        </td>
 
-                        <div className="modal-body">
+                        <td>
+                          <Estado
+                            activo={categoria.activo}
+                            activoTexto="Activa"
+                            inactivoTexto="Inactiva"
+                          />
+                        </td>
 
-                            <div className="modal-form-group">
+                        <td>
+                          <SiNo valor={categoria.adminflg} />
+                        </td>
 
-                                <label>
-                                    Nombre de la categoría
-                                </label>
+                        <td className="adm-col-action">
+                          <BotonEditar
+                            titulo={`Editar ${categoria.categoria}`}
+                            onClick={() => abrirEdicion(categoria)}
+                          />
+                        </td>
+                      </tr>
 
-                                <input
-                                    type="text"
-                                    name="categoria"
-                                    value={
-                                        editing.categoria
-                                    }
-                                    onChange={
-                                        handleEditChange
-                                    }
-                                />
+                      {abierta && (
+                        <tr>
+                          <td colSpan={5} className="adm-sub-cell">
+                            <div
+                              className="adm-sub"
+                              style={{ "--sub-color": categoria.color }}
+                            >
 
-                            </div>
+                              <div className="adm-sub-header">
+                                <h3>
+                                  Subcategorías
 
-
-                            <div className="modal-form-group">
-
-                                <label>
-                                    Color
-                                </label>
-
-                                <div className="color-input-wrapper">
-
-                                    <input
-                                        type="color"
-                                        name="color"
-                                        value={
-                                            editing.color ||
-                                            "#2563eb"
-                                        }
-                                        onChange={
-                                            handleEditChange
-                                        }
-                                    />
-
-                                    <input
-                                        type="text"
-                                        name="color"
-                                        value={
-                                            editing.color
-                                        }
-                                        onChange={
-                                            handleEditChange
-                                        }
-                                    />
-
-                                </div>
-
-                            </div>
-
-
-                            <div className="modal-options">
-
-                                <label className="switch-option">
-
-                                    <input
-                                        type="checkbox"
-                                        name="activo"
-                                        checked={
-                                            editing.activo
-                                        }
-                                        onChange={
-                                            handleEditChange
-                                        }
-                                    />
-
-                                    <span className="switch"></span>
-
-                                    <span>
-
-                                        <strong>
-                                            Activo
-                                        </strong>
-
+                                  {!cargandoSubs && !errorSubs && (
+                                    <span className="adm-count">
+                                      {subs.length}
                                     </span>
-
-                                </label>
-
-
-                                <label className="switch-option">
-
-                                    <input
-                                        type="checkbox"
-                                        name="adminflg"
-                                        checked={
-                                            editing.adminflg
-                                        }
-                                        onChange={
-                                            handleEditChange
-                                        }
-                                    />
-
-                                    <span className="switch"></span>
-
-                                    <span>
-
-                                        <strong>
-                                            Solo administración
-                                        </strong>
-
-                                    </span>
-
-                                </label>
-
-                            </div>
-
-                        </div>
-
-
-                        <div className="modal-footer">
-
-                            <button
-                                className="modal-cancel"
-                                onClick={cerrarEdicion}
-                                disabled={saving}
-                            >
-                                Cancelar
-                            </button>
-
-
-                            <button
-                                className="modal-save"
-                                onClick={
-                                    guardarCategoria
-                                }
-                                disabled={saving}
-                            >
-
-                                {
-                                    saving
-                                        ? "Guardando..."
-                                        : "Guardar cambios"
-                                }
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            )}
-
-
-            {/* =================================================
-                MODAL NUEVA CATEGORIA
-            ================================================= */}
-
-            {newCategoria && (
-
-                <div
-                    className="modal-overlay"
-                    onMouseDown={() =>
-                        !saving &&
-                        setNewCategoria(false)
-                    }
-                >
-
-                    <div
-                        className="categoria-modal"
-                        onMouseDown={e =>
-                            e.stopPropagation()
-                        }
-                    >
-
-                        <div className="modal-header">
-
-                            <div>
-
-                                <h2>
-                                    Nueva categoría
-                                </h2>
-
-                            </div>
-
-
-                            <button
-                                className="modal-close"
-                                onClick={() =>
-                                    setNewCategoria(false)
-                                }
-                                disabled={saving}
-                            >
-                                ×
-                            </button>
-
-                        </div>
-
-
-                        <div className="modal-body">
-
-                            <div className="modal-form-group">
-
-                                <label>
-                                    Nombre de la categoría
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={
-                                        newCategoria.categoria
-                                    }
-                                    onChange={e =>
-                                        setNewCategoria(prev => ({
-                                            ...prev,
-                                            categoria:
-                                                e.target.value
-                                        }))
-                                    }
-                                />
-
-                            </div>
-
-
-                            <div className="modal-form-group">
-
-                                <label>
-                                    Color
-                                </label>
-
-                                <div className="color-input-wrapper">
-
-                                    <input
-                                        type="color"
-                                        value={
-                                            newCategoria.color
-                                        }
-                                        onChange={e =>
-                                            setNewCategoria(prev => ({
-                                                ...prev,
-                                                color:
-                                                    e.target.value
-                                            }))
-                                        }
-                                    />
-
-                                    <input
-                                        type="text"
-                                        value={
-                                            newCategoria.color
-                                        }
-                                        onChange={e =>
-                                            setNewCategoria(prev => ({
-                                                ...prev,
-                                                color:
-                                                    e.target.value
-                                            }))
-                                        }
-                                    />
-
-                                </div>
-
-                            </div>
-
-
-                            <div className="modal-options">
-
-                                <label className="switch-option">
-
-                                    <input
-                                        type="checkbox"
-                                        checked={
-                                            newCategoria.adminflg
-                                        }
-                                        onChange={e =>
-                                            setNewCategoria(prev => ({
-                                                ...prev,
-                                                adminflg:
-                                                    e.target.checked
-                                            }))
-                                        }
-                                    />
-
-                                    <span className="switch"></span>
-
-                                    <span>
-
-                                        <strong>
-                                            Solo administración
-                                        </strong>
-
-                                    </span>
-
-                                </label>
-
-                            </div>
-
-                        </div>
-
-
-                        <div className="modal-footer">
-
-                            <button
-                                className="modal-cancel"
-                                onClick={() =>
-                                    setNewCategoria(false)
-                                }
-                                disabled={saving}
-                            >
-                                Cancelar
-                            </button>
-
-
-                            <button
-                                className="modal-save"
-                                onClick={
-                                    crearCategoria
-                                }
-                                disabled={saving}
-                            >
-
-                                {
-                                    saving
-                                        ? "Creando..."
-                                        : "Crear categoría"
-                                }
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            )}
-
-
-            {/* =================================================
-                MODAL NUEVA SUBCATEGORIA
-            ================================================= */}
-
-            {newSubcategoria && (
-
-                <div
-                    className="modal-overlay"
-                    onMouseDown={() =>
-                        !saving &&
-                        setNewSubcategoria(null)
-                    }
-                >
-
-                    <div
-                        className="categoria-modal"
-                        onMouseDown={e =>
-                            e.stopPropagation()
-                        }
-                    >
-
-                        <div className="modal-header">
-
-                            <div>
-
-                                <h2>
-                                    Nueva subcategoría
-                                </h2>
-
-                            </div>
-
-
-                            <button
-                                className="modal-close"
-                                onClick={() =>
-                                    setNewSubcategoria(null)
-                                }
-                                disabled={saving}
-                            >
-                                ×
-                            </button>
-
-                        </div>
-
-
-                        <div className="modal-body">
-
-                            <div className="modal-form-group">
-
-                                <label>
-                                    Nombre de la subcategoría
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={
-                                        newSubcategoria.subcategoria
-                                    }
-                                    onChange={e =>
-                                        setNewSubcategoria(prev => ({
-                                            ...prev,
-                                            subcategoria:
-                                                e.target.value
-                                        }))
-                                    }
-                                />
-
-                            </div>
-
-
-                            <div className="modal-options">
-
-                                <label className="switch-option">
-
-                                    <input
-                                        type="checkbox"
-                                        checked={
-                                            newSubcategoria.adminflg
-                                        }
-                                        onChange={e =>
-                                            setNewSubcategoria(prev => ({
-                                                ...prev,
-                                                adminflg:
-                                                    e.target.checked
-                                            }))
-                                        }
-                                        maxLength="40"
-                                    />
-
-                                    <span className="switch"></span>
-
-                                    <span>
-
-                                        <strong>
-                                            Solo administración
-                                        </strong>
-
-                                    </span>
-
-                                </label>
-
-                            </div>
-
-                        </div>
-
-
-                        <div className="modal-footer">
-
-                            <button
-                                className="modal-cancel"
-                                onClick={() =>
-                                    setNewSubcategoria(null)
-                                }
-                                disabled={saving}
-                            >
-                                Cancelar
-                            </button>
-
-
-                            <button
-                                className="modal-save"
-                                onClick={
-                                    crearSubcategoria
-                                }
-                                disabled={saving}
-                            >
-
-                                {
-                                    saving
-                                        ? "Creando..."
-                                        : "Crear subcategoría"
-                                }
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            )}
-
-            {editingSubcategoria && (
-
-                <div
-                    className="modal-overlay"
-                    onMouseDown={() =>
-                        !saving &&
-                        setEditingSubcategoria(null)
-                    }
-                >
-
-                    <div
-                        className="categoria-modal"
-                        onMouseDown={e =>
-                            e.stopPropagation()
-                        }
-                    >
-
-                        <div className="modal-header">
-
-                            <div>
-
-                                <h2>
-                                    Editar subcategoría
-                                </h2>
-
-                            </div>
-
-
-                            <button
-                                className="modal-close"
-                                onClick={() =>
-                                    setEditingSubcategoria(null)
-                                }
-                                disabled={saving}
-                            >
-                                ×
-                            </button>
-
-                        </div>
-
-
-                        <div className="modal-body">
-
-                            <div className="modal-form-group">
-
-                                <label>
-                                    Nombre de la subcategoría
-                                </label>
-
-                                <input
-                                type="text"
-                                value={editingSubcategoria.subCat}
-                                onChange={e =>
-                                    setEditingSubcategoria(prev => ({
-                                    ...prev,
-                                    subCat: e.target.value.slice(0, 5)
-                                    }))
-                                }
-                                maxLength={5}
-                                />
-
-                            </div>
-
-
-                            {/* CATEGORIA */}
-
-                            <div className="modal-form-group">
-
-                                <label>
-                                    Categoría
-                                </label>
-
-                                <select
-                                    value={
-                                        editingSubcategoria.categoriaId
-                                    }
-                                    onChange={e =>
-                                        setEditingSubcategoria(prev => ({
-                                            ...prev,
-                                            categoriaId:
-                                                Number(
-                                                    e.target.value
-                                                )
-                                        }))
-                                    }
+                                  )}
+                                </h3>
+
+                                <button
+                                  type="button"
+                                  className="adm-btn adm-btn--secondary adm-btn--sm"
+                                  onClick={() => abrirNuevaSubcategoria(id)}
+                                  disabled={cargandoSubs || Boolean(errorSubs)}
                                 >
+                                  <Icono nombre="plus" size={14} />
+                                  Nueva subcategoría
+                                </button>
+                              </div>
 
-                                    <option value="">
-                                        Seleccionar categoría
-                                    </option>
+                              {cargandoSubs ? (
 
+                                <Cargando
+                                  compacto
+                                  texto="Cargando subcategorías..."
+                                />
 
-                                    {categorias.map(categoria => (
+                              ) : errorSubs ? (
 
-                                        <option
-                                            key={
-                                                categoria.categoriaId
-                                            }
-                                            value={
-                                                categoria.categoriaId
-                                            }
-                                        >
+                                <p className="adm-sub-error">
+                                  {errorSubs}
 
-                                            {
-                                                categoria.categoria
-                                            }
+                                  <button
+                                    type="button"
+                                    className="adm-btn adm-btn--secondary adm-btn--sm"
+                                    onClick={() => cargarSubcategorias(id)}
+                                  >
+                                    Reintentar
+                                  </button>
+                                </p>
 
-                                        </option>
+                              ) : subs.length === 0 ? (
 
-                                    ))}
+                                <p className="adm-sub-empty">
+                                  Esta categoría todavía no tiene subcategorías.
+                                </p>
 
-                                </select>
+                              ) : (
 
-                            </div>
+                                <ul className="adm-sublist">
+                                  {subs.map(sub => (
+                                    <li key={sub.subCatId}>
 
+                                      <span className="adm-sub-name">
+                                        {sub.subCat}
+                                      </span>
 
-                            {/* OPCIONES */}
-
-                            <div className="modal-options">
-
-                                <label className="switch-option">
-
-                                    <input
-                                        type="checkbox"
-                                        checked={
-                                            editingSubcategoria.activo
-                                        }
-                                        onChange={e =>
-                                            setEditingSubcategoria(prev => ({
-                                                ...prev,
-                                                activo:
-                                                    e.target.checked
-                                            }))
-                                        }
-                                    />
-
-                                    <span className="switch"></span>
-
-                                    <span>
-
-                                        <strong>
-                                            Activa
-                                        </strong>
-
-                                    </span>
-
-                                </label>
-
-
-                                <label className="switch-option">
-
-                                    <input
-                                        type="checkbox"
-                                        checked={
-                                            editingSubcategoria.adminflg
-                                        }
-                                        onChange={e =>
-                                            setEditingSubcategoria(prev => ({
-                                                ...prev,
-                                                adminflg:
-                                                    e.target.checked
-                                            }))
-                                        }
-                                    />
-
-                                    <span className="switch"></span>
-
-                                    <span>
-
-                                        <strong>
+                                      <span className="adm-sub-meta">
+                                        {sub.adminflg && (
+                                          <span className="adm-tag">
                                             Solo administración
-                                        </strong>
+                                          </span>
+                                        )}
 
-                                    </span>
+                                        <Estado
+                                          activo={sub.activo}
+                                          activoTexto="Activa"
+                                          inactivoTexto="Inactiva"
+                                        />
 
-                                </label>
+                                        <BotonEditar
+                                          pequeno
+                                          titulo={`Editar ${sub.subCat}`}
+                                          onClick={() =>
+                                            abrirEdicionSubcategoria(sub)
+                                          }
+                                        />
+                                      </span>
+
+                                    </li>
+                                  ))}
+                                </ul>
+
+                              )}
 
                             </div>
+                          </td>
+                        </tr>
+                      )}
 
-                        </div>
+                    </Fragment>
+                  )
+                })}
+              </tbody>
 
+            </table>
+          </div>
 
-                        <div className="modal-footer">
+        )}
 
-                            <button
-                                className="modal-cancel"
-                                onClick={() =>
-                                    setEditingSubcategoria(null)
-                                }
-                                disabled={saving}
-                            >
-                                Cancelar
-                            </button>
+      </Tarjeta>
 
+      {modalCategoria && (
+        <Modal
+          titulo={
+            categoriaEsNueva
+              ? "Nueva categoría"
+              : "Editar categoría"
+          }
+          descripcion={
+            categoriaEsNueva
+              ? "Ingresa la información de la nueva categoría."
+              : "Modifica la información de la categoría."
+          }
+          onCerrar={cerrarModalCategoria}
+          onEnviar={guardarCategoria}
+          guardando={saving}
+          error={errorForm}
+          textoEnviar={
+            categoriaEsNueva
+              ? "Crear categoría"
+              : "Guardar cambios"
+          }
+        >
 
-                            <button
-                                className="modal-save"
-                                onClick={
-                                    guardarSubcategoria
-                                }
-                                disabled={saving}
-                            >
+          <Campo
+            etiqueta="Nombre de la categoría"
+            id="categoria-nombre"
+          >
+            <input
+              id="categoria-nombre"
+              type="text"
+              value={modalCategoria.categoria}
+              onChange={e =>
+                cambiarCategoria("categoria", e.target.value)
+              }
+              placeholder="Ej: Soporte técnico"
+              maxLength={MAX_CATEGORIA}
+              disabled={saving}
+              autoFocus
+            />
+          </Campo>
 
-                                {
-                                    saving
-                                        ? "Guardando..."
-                                        : "Guardar cambios"
-                                }
+          <Campo etiqueta="Color" id="categoria-color">
+            <CampoColor
+              id="categoria-color"
+              valor={modalCategoria.color}
+              onChange={valor => cambiarCategoria("color", valor)}
+              deshabilitado={saving}
+            />
+          </Campo>
 
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
+          <ListaInterruptores>
+            {!categoriaEsNueva && (
+              <Interruptor
+                titulo="Categoría activa"
+                descripcion="Define si la categoría estará disponible para ser utilizada."
+                checked={modalCategoria.activo}
+                onChange={valor => cambiarCategoria("activo", valor)}
+                deshabilitado={saving}
+              />
             )}
 
-        </div>
+            <Interruptor
+              titulo="Solo administración"
+              descripcion="Restringe la categoría al área de administración."
+              checked={modalCategoria.adminflg}
+              onChange={valor => cambiarCategoria("adminflg", valor)}
+              deshabilitado={saving}
+            />
+          </ListaInterruptores>
 
-    )
+        </Modal>
+      )}
 
+      {modalSub && (
+        <Modal
+          titulo={
+            subEsNueva
+              ? "Nueva subcategoría"
+              : "Editar subcategoría"
+          }
+          descripcion={
+            subEsNueva
+              ? "Ingresa la información de la nueva subcategoría."
+              : "Modifica la información de la subcategoría."
+          }
+          onCerrar={cerrarModalSub}
+          onEnviar={guardarSubcategoria}
+          guardando={saving}
+          error={errorForm}
+          textoEnviar={
+            subEsNueva
+              ? "Crear subcategoría"
+              : "Guardar cambios"
+          }
+        >
+
+          <Campo
+            etiqueta="Nombre de la subcategoría"
+            id="subcategoria-nombre"
+          >
+            <input
+              id="subcategoria-nombre"
+              type="text"
+              value={modalSub.subCat}
+              onChange={e => cambiarSub("subCat", e.target.value)}
+              maxLength={MAX_SUBCATEGORIA}
+              disabled={saving}
+              autoFocus
+            />
+          </Campo>
+
+          {!subEsNueva && (
+            <Campo etiqueta="Categoría" id="subcategoria-categoria">
+              <select
+                id="subcategoria-categoria"
+                value={modalSub.categoriaId ?? ""}
+                onChange={e =>
+                  cambiarSub("categoriaId", Number(e.target.value))
+                }
+                disabled={saving}
+              >
+                <option value="">Seleccionar categoría</option>
+
+                {categorias.map(categoria => (
+                  <option
+                    key={categoria.categoriaId}
+                    value={categoria.categoriaId}
+                  >
+                    {categoria.categoria}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          )}
+
+          <ListaInterruptores>
+            {!subEsNueva && (
+              <Interruptor
+                titulo="Subcategoría activa"
+                descripcion="Define si la subcategoría estará disponible para ser utilizada."
+                checked={modalSub.activo}
+                onChange={valor => cambiarSub("activo", valor)}
+                deshabilitado={saving}
+              />
+            )}
+
+            <Interruptor
+              titulo="Solo administración"
+              descripcion="Restringe la subcategoría al área de administración."
+              checked={modalSub.adminflg}
+              onChange={valor => cambiarSub("adminflg", valor)}
+              deshabilitado={saving}
+            />
+          </ListaInterruptores>
+
+        </Modal>
+      )}
+
+    </div>
+  )
 }

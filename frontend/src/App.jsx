@@ -18,6 +18,7 @@ import CambiarContraseña from "./pages/cambiarContraseña"
 import RecuperarContraseña from "./pages/RecuperarContraseña"
 import TiposTicket from "./pages/TiposTicket"
 import Departamentos from "./pages/Departamentos"
+import Usuarios from "./pages/Usuarios"
 
 import useAuth from "./hooks/useAuth"
 
@@ -172,6 +173,11 @@ export default function App() {
           element={<Departamentos />}
         />
 
+        <Route
+          path="/usuarios"
+          element={<Usuarios/>}
+        />
+
       </Route>
 
       <Route
@@ -188,7 +194,7 @@ export default function App() {
         path="/cambiar-contraseña"
         element={
           <Navigate
-            to="/dashboard"
+            to="/tickets"
             replace
           />
         }
@@ -198,7 +204,7 @@ export default function App() {
         path="/recuperar-contraseña"
         element={
           <Navigate
-            to="/dashboard"
+            to="/tickets"
             replace
           />
         }
